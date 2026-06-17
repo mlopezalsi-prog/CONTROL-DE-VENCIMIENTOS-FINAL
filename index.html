@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ALSI Control Documental 2.0 - REV31 ALTAS SEGUN FILTRO</title>
+<title>ALSI Control Documental 2.0 - REV32 ALTAS SEGUN FILTRO</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#f6f8fb;--card:#fff;--line:#e2e8f0;--text:#0f172a;--muted:#64748b;--blue:#2563eb;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--black:#111827}
@@ -79,7 +79,7 @@ tbody tr.alsi-row-selected td:first-child{font-weight:950;color:#1d4ed8;}
 
 <section id="loginScreen" class="login"><div class="login-card"><div class="logo">A</div><h1>ALSI 2.0</h1><div class="muted">Control Documental conectado a Supabase</div><div class="field"><label>Usuario</label><select id="loginUser" class="input"><option value="matias">Matías López</option><option value="sergio">Sergio Rodríguez</option><option value="eduardo">Eduardo Gómez</option><option value="sorio">Matías Sorio</option></select></div><div class="field"><label>Contraseña</label><input id="loginPass" class="input" type="password" autocomplete="current-password" placeholder="Ingrese contraseña"></div><button id="loginBtn" class="btn primary" style="width:100%;margin-top:18px">Ingresar</button><div id="loginError" class="hidden" style="margin-top:12px;color:#b91c1c;font-weight:800"></div></div></section>
 <section id="loaderScreen" class="loader hidden"><div class="loader-card"><div class="logo">A</div><h2>Preparando ALSI 2.0</h2><div id="loadText" class="muted">Conectando...</div><div class="bar"><div id="loadBar"></div></div><div id="loadSteps" class="muted"></div></div></section>
-<section id="appScreen" class="app hidden"><aside><div class="brand"><div class="logo">A</div><div><b>ALSI 2.0</b><div class="muted">Control Documental · REV31</div></div></div><div class="side-filter"><label>Filtro de obra</label><select id="workFilter"><option value="TODAS">Todas mis obras</option></select></div><div class="side-title">Navegación</div><button id="nav-dashboard" class="nav-btn active" data-view="dashboard">📊 Dashboard</button><button id="nav-personas" class="nav-btn" data-view="personas">👷 Personal</button><button id="nav-monotributistas" class="nav-btn" data-view="monotributistas">🧾 Monotributistas</button><button id="nav-empresas" class="nav-btn" data-view="empresas">🏢 Empresas</button><button id="nav-vehiculos" class="nav-btn" data-view="vehiculos">🚗 Vehículos</button><button id="nav-bajas" class="nav-btn" data-view="bajas">📁 Bajas</button><button id="nav-telegramas" class="nav-btn" data-view="telegramas">📨 Telegramas</button><button id="nav-requisitos" class="nav-btn admin-only" data-view="requisitos">📄 Requerimientos</button><button id="nav-obras" class="nav-btn admin-only" data-view="obras">🏗️ Obras</button><button id="nav-usuarios" class="nav-btn admin-only" data-view="usuarios">👥 Usuarios</button><button id="nav-importar" class="nav-btn" data-view="importar">📥 Importar backup</button></aside><main><div class="top"><div><h2 id="pageTitle">Dashboard</h2><div id="pageSub" class="muted">Panel de control</div></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="syncCurrentViewBtn" class="btn" title="Actualizar vista actual">🔄</button><div class="top-user"><span class="dot"></span><div><b id="topUserName"></b><br><span class="muted" id="topUserRole"></span></div><button id="logoutBtn" class="btn">Salir</button></div></div></div><div id="view" class="content"></div></main></section>
+<section id="appScreen" class="app hidden"><aside><div class="brand"><div class="logo">A</div><div><b>ALSI 2.0</b><div class="muted">Control Documental · REV32</div></div></div><div class="side-filter"><label>Filtro de obra</label><select id="workFilter"><option value="TODAS">Todas mis obras</option></select></div><div class="side-title">Navegación</div><button id="nav-dashboard" class="nav-btn active" data-view="dashboard">📊 Dashboard</button><button id="nav-personas" class="nav-btn" data-view="personas">👷 Personal</button><button id="nav-monotributistas" class="nav-btn" data-view="monotributistas">🧾 Monotributistas</button><button id="nav-empresas" class="nav-btn" data-view="empresas">🏢 Empresas</button><button id="nav-vehiculos" class="nav-btn" data-view="vehiculos">🚗 Vehículos</button><button id="nav-bajas" class="nav-btn" data-view="bajas">📁 Bajas</button><button id="nav-telegramas" class="nav-btn" data-view="telegramas">📨 Telegramas</button><button id="nav-requisitos" class="nav-btn admin-only" data-view="requisitos">📄 Requerimientos</button><button id="nav-obras" class="nav-btn admin-only" data-view="obras">🏗️ Obras</button><button id="nav-usuarios" class="nav-btn admin-only" data-view="usuarios">👥 Usuarios</button><button id="nav-importar" class="nav-btn" data-view="importar">📥 Importar backup</button></aside><main><div class="top"><div><h2 id="pageTitle">Dashboard</h2><div id="pageSub" class="muted">Panel de control</div></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="syncCurrentViewBtn" class="btn" title="Actualizar vista actual">🔄</button><div class="top-user"><span class="dot"></span><div><b id="topUserName"></b><br><span class="muted" id="topUserRole"></span></div><button id="logoutBtn" class="btn">Salir</button></div></div></div><div id="view" class="content"></div></main></section>
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="closeModalBtn" class="btn">✕</button></div><div id="modalBody" class="modal-body"></div></div></div><button id="calendarToggle" class="hidden">📅</button><div id="syncMiniStatus"></div>
 <script>
 (function(){'use strict';
@@ -116,7 +116,38 @@ function canSee(r){if(isAdmin())return true; const cw=recordWork(r); return !!cw
 function visibleRecords(bucket){let arr=state.records.filter(r=>(!bucket||bucketOf(r)===bucket)&&canSee(r)); const wf=$('workFilter')?$('workFilter').value:'TODAS'; if(wf&&wf!=='TODAS')arr=arr.filter(r=>norm(recordWork(r))===norm(wf)); return arr}
 function actionButtons(id){return '<div class="icon-actions"><button class="icon-btn view" title="Abrir" data-open="'+esc(id)+'">👁️</button><button class="icon-btn edit" title="Editar" data-open="'+esc(id)+'">✏️</button><button class="icon-btn delete" title="Eliminar" data-delete="'+esc(id)+'">🗑️</button></div>'}
 async function login(){const key=$('loginUser').value,pass=$('loginPass').value,user=USERS[key]; if(!user||user.pass!==pass){$('loginError').textContent='Usuario o contraseña incorrecta';$('loginError').classList.remove('hidden');return} state.user=user; $('loginScreen').classList.add('hidden');$('loaderScreen').classList.remove('hidden'); try{if(!window.supabase)throw new Error('No cargó la librería de Supabase. Revisá internet.'); supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); window.supa=supa; await loadAll(true); $('loaderScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('calendarToggle').classList.remove('hidden'); buildShell(); setView('dashboard',false); subscribeRealtime()}catch(e){console.error(e);setProgress(100,'Error: '+(e.message||e))}}
-async function loadAll(withProgress=false){if(withProgress)setProgress(10,'Conectando con Supabase'); const plants=await supa.from('alsi_plants').select('*').order('name'); if(plants.error)throw plants.error; state.plants=plants.data||[]; if(withProgress)setProgress(35,'Plantas cargadas'); const works=await supa.from('alsi_works').select('*').order('plant').order('name'); if(works.error)throw works.error; state.works=works.data||[]; if(withProgress)setProgress(55,'Obras cargadas'); const users=await supa.from('alsi_users').select('*'); if(!users.error)state.users=users.data||[]; const records=await supa.from('alsi_records').select('*').order('display_name'); if(records.error)throw records.error; state.records=records.data||[]; state.loaded=true; if(withProgress){setProgress(90,'Registros cargados');setProgress(100,'Listo')}}
+async function loadAll(withProgress=false){
+  if(withProgress)setProgress(10,'Conectando con Supabase');
+  const plants=await supa.from('alsi_plants').select('*').order('name');
+  if(plants.error)throw plants.error;
+  state.plants=plants.data||[];
+  if(withProgress)setProgress(35,'Plantas cargadas');
+  const works=await supa.from('alsi_works').select('*').order('plant').order('name');
+  if(works.error)throw works.error;
+  state.works=works.data||[];
+  if(withProgress)setProgress(55,'Obras cargadas');
+  const users=await supa.from('alsi_users').select('*');
+  if(!users.error)state.users=users.data||[];
+
+  // REV32: cargar TODOS los registros por páginas. Supabase/PostgREST suele limitar a 1000 filas por consulta.
+  // Sin esto, las altas nuevas pueden existir en Supabase pero no aparecer en pantalla.
+  const allRecords=[];
+  const pageSize=1000;
+  for(let from=0;;from+=pageSize){
+    const to=from+pageSize-1;
+    const records=await supa.from('alsi_records')
+      .select('*')
+      .order('created_at',{ascending:false})
+      .range(from,to);
+    if(records.error)throw records.error;
+    const chunk=records.data||[];
+    allRecords.push(...chunk);
+    if(chunk.length<pageSize)break;
+  }
+  state.records=allRecords;
+  state.loaded=true;
+  if(withProgress){setProgress(90,'Registros cargados: '+allRecords.length);setProgress(100,'Listo')}
+}
 async function refresh(silent=false){if(syncBusy||!supa||!state.loaded)return; syncBusy=true; if(!silent)showSync('Actualizando datos...'); try{await loadAll(false); if(!silent)showSync('Datos actualizados'); render()}catch(e){console.warn(e); if(!silent)showSync('No se pudo actualizar')}finally{syncBusy=false}} window.alsiRefreshCurrentView=refresh;
 function buildShell(){$('topUserName').textContent=state.user.name;$('topUserRole').textContent=state.user.role;$('workFilter').innerHTML='<option value="TODAS">Todas mis obras</option>'+masterWorksForUser().map(w=>'<option value="'+esc(w)+'">'+esc(w)+'</option>').join(''); document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin()?'flex':'none')}
 function setView(v,doRefresh=true){if(['requisitos','obras','usuarios'].includes(v)&&!isAdmin())v='dashboard'; state.view=v; document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v)); render(); if(doRefresh)refresh(true)} window.setView=setView;
