@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ALSI Control Documental 2.0 - REV21 FINAL VISUAL</title>
+<title>ALSI Control Documental 2.0 - REV27 ALTAS VERIFICADAS SUPABASE</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#f6f8fb;--card:#fff;--line:#e2e8f0;--text:#0f172a;--muted:#64748b;--blue:#2563eb;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--black:#111827}
@@ -77,9 +77,9 @@ tbody tr.alsi-row-selected td:first-child{font-weight:950;color:#1d4ed8;}
 <body>
 
 
-<section id="loginScreen" class="login"><div class="login-card"><div class="logo">A</div><h1>ALSI 2.0</h1><div class="muted">Control Documental conectado a Supabase</div><div class="field"><label>Usuario</label><select id="loginUser" class="input"><option value="matias">Matías López</option><option value="sergio">Sergio Rodríguez</option><option value="eduardo">Eduardo Gómez</option><option value="sorio">Matías Sorio</option></select></div><div class="field"><label>Contraseña</label><input id="loginPass" class="input" type="password" value="1234"></div><button id="loginBtn" class="btn primary" style="width:100%;margin-top:18px">Ingresar</button><div id="loginError" class="hidden" style="margin-top:12px;color:#b91c1c;font-weight:800"></div></div></section>
+<section id="loginScreen" class="login"><div class="login-card"><div class="logo">A</div><h1>ALSI 2.0</h1><div class="muted">Control Documental conectado a Supabase</div><div class="field"><label>Usuario</label><select id="loginUser" class="input"><option value="matias">Matías López</option><option value="sergio">Sergio Rodríguez</option><option value="eduardo">Eduardo Gómez</option><option value="sorio">Matías Sorio</option></select></div><div class="field"><label>Contraseña</label><input id="loginPass" class="input" type="password" placeholder="Ingrese contraseña"></div><button id="loginBtn" class="btn primary" style="width:100%;margin-top:18px">Ingresar</button><div id="loginError" class="hidden" style="margin-top:12px;color:#b91c1c;font-weight:800"></div></div></section>
 <section id="loaderScreen" class="loader hidden"><div class="loader-card"><div class="logo">A</div><h2>Preparando ALSI 2.0</h2><div id="loadText" class="muted">Conectando...</div><div class="bar"><div id="loadBar"></div></div><div id="loadSteps" class="muted"></div></div></section>
-<section id="appScreen" class="app hidden"><aside><div class="brand"><div class="logo">A</div><div><b>ALSI 2.0</b><div class="muted">Control Documental</div></div></div><div class="side-filter"><label>Filtro de obra</label><select id="workFilter"><option value="TODAS">Todas mis obras</option></select></div><div class="side-title">Navegación</div><button id="nav-dashboard" class="nav-btn active" data-view="dashboard">📊 Dashboard</button><button id="nav-personas" class="nav-btn" data-view="personas">👷 Personal</button><button id="nav-monotributistas" class="nav-btn" data-view="monotributistas">🧾 Monotributistas</button><button id="nav-empresas" class="nav-btn" data-view="empresas">🏢 Empresas</button><button id="nav-vehiculos" class="nav-btn" data-view="vehiculos">🚗 Vehículos</button><button id="nav-bajas" class="nav-btn" data-view="bajas">📁 Bajas</button><button id="nav-telegramas" class="nav-btn" data-view="telegramas">📨 Telegramas</button><button id="nav-requisitos" class="nav-btn admin-only" data-view="requisitos">📄 Requerimientos</button><button id="nav-obras" class="nav-btn admin-only" data-view="obras">🏗️ Obras</button><button id="nav-usuarios" class="nav-btn admin-only" data-view="usuarios">👥 Usuarios</button><button id="nav-importar" class="nav-btn" data-view="importar">📥 Importar backup</button></aside><main><div class="top"><div><h2 id="pageTitle">Dashboard</h2><div id="pageSub" class="muted">Panel de control</div></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="syncCurrentViewBtn" class="btn" title="Actualizar vista actual">🔄</button><div class="top-user"><span class="dot"></span><div><b id="topUserName"></b><br><span class="muted" id="topUserRole"></span></div><button id="logoutBtn" class="btn">Salir</button></div></div></div><div id="view" class="content"></div></main></section>
+<section id="appScreen" class="app hidden"><aside><div class="brand"><div class="logo">A</div><div><b>ALSI 2.0</b><div class="muted">Control Documental · REV27</div></div></div><div class="side-filter"><label>Filtro de obra</label><select id="workFilter"><option value="TODAS">Todas mis obras</option></select></div><div class="side-title">Navegación</div><button id="nav-dashboard" class="nav-btn active" data-view="dashboard">📊 Dashboard</button><button id="nav-personas" class="nav-btn" data-view="personas">👷 Personal</button><button id="nav-monotributistas" class="nav-btn" data-view="monotributistas">🧾 Monotributistas</button><button id="nav-empresas" class="nav-btn" data-view="empresas">🏢 Empresas</button><button id="nav-vehiculos" class="nav-btn" data-view="vehiculos">🚗 Vehículos</button><button id="nav-bajas" class="nav-btn" data-view="bajas">📁 Bajas</button><button id="nav-telegramas" class="nav-btn" data-view="telegramas">📨 Telegramas</button><button id="nav-requisitos" class="nav-btn admin-only" data-view="requisitos">📄 Requerimientos</button><button id="nav-obras" class="nav-btn admin-only" data-view="obras">🏗️ Obras</button><button id="nav-usuarios" class="nav-btn admin-only" data-view="usuarios">👥 Usuarios</button><button id="nav-importar" class="nav-btn" data-view="importar">📥 Importar backup</button></aside><main><div class="top"><div><h2 id="pageTitle">Dashboard</h2><div id="pageSub" class="muted">Panel de control</div></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="syncCurrentViewBtn" class="btn" title="Actualizar vista actual">🔄</button><div class="top-user"><span class="dot"></span><div><b id="topUserName"></b><br><span class="muted" id="topUserRole"></span></div><button id="logoutBtn" class="btn">Salir</button></div></div></div><div id="view" class="content"></div></main></section>
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="closeModalBtn" class="btn">✕</button></div><div id="modalBody" class="modal-body"></div></div></div><button id="calendarToggle" class="hidden">📅</button><div id="syncMiniStatus"></div>
 <script>
 (function(){'use strict';
@@ -87,7 +87,7 @@ const SUPABASE_URL="https://bkqlqdjjezeowilsvyuo.supabase.co";
 const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrcWxxZGpqZXplb3dpbHN2eXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExOTIxMTAsImV4cCI6MjA5Njc2ODExMH0.h--hzZettht-P3hTpRiYdyGq0KFBtgF02r5ea3d-bek";
 let supa=null,syncBusy=false;
 const SAFE_MODE=false;
-const USERS={matias:{id:'u_matias_lopez',name:'Matías López',role:'Responsable RRHH',pass:'1234',works:['ARAUCO','NOURYON','SWIFT','TSM','CENTRAL PUERTO']},sergio:{id:'u_sergio_rodriguez',name:'Sergio Rodríguez',role:'Responsable RRHH',pass:'1234',works:['CARGILL VGG / PPA','LDC LAGOS / TIMBÚES','EVONIK']},eduardo:{id:'u_eduardo_gomez',name:'Eduardo Gómez',role:'Responsable RRHH',pass:'1234',works:['ACINDAR','PAMPA','BOORTMALT']},sorio:{id:'u_sorio_matias',name:'Matías Sorio',role:'Administrador General',pass:'1234',admin:true,works:['*']}};
+const USERS={matias:{id:'u_matias_lopez',name:'Matías López',role:'Responsable RRHH',pass:'83462',works:['ARAUCO','NOURYON','SWIFT','TSM','CENTRAL PUERTO']},sergio:{id:'u_sergio_rodriguez',name:'Sergio Rodríguez',role:'Responsable RRHH',pass:'51987',works:['CARGILL VGG / PPA','LDC LAGOS / TIMBÚES','EVONIK']},eduardo:{id:'u_eduardo_gomez',name:'Eduardo Gómez',role:'Responsable RRHH',pass:'24735',works:['ACINDAR','PAMPA','BOORTMALT']},sorio:{id:'u_sorio_matias',name:'Matías Sorio',role:'Administrador General',pass:'69158',admin:true,works:['*']}};
 const MASTER_WORKS={matias:['ARAUCO','NOURYON','SWIFT','TSM','CENTRAL PUERTO'],sergio:['CARGILL VGG / PPA','LDC LAGOS / TIMBÚES','EVONIK'],eduardo:['ACINDAR','PAMPA','BOORTMALT'],sorio:['ARAUCO','NOURYON','SWIFT','TSM','CENTRAL PUERTO','CARGILL VGG / PPA','LDC LAGOS / TIMBÚES','EVONIK','ACINDAR','PAMPA','BOORTMALT']};
 const BUCKETS={personas:{title:'Personal',search:'legajo, nombre o CUIL',new:'+ Nuevo legajo',idLabel:'Legajo'},monotributistas:{title:'Monotributistas',search:'nombre, CUIT o obra',new:'+ Nuevo monotributista',idLabel:'CUIT / Legajo'},empresas:{title:'Empresas',search:'empresa o CUIT',new:'+ Nueva empresa',idLabel:'CUIT'},vehiculos:{title:'Vehículos',search:'dominio o empresa',new:'+ Nuevo vehículo',idLabel:'Dominio'}};
 const BUCKET_DB={personas:'personas',monotributistas:'monos',empresas:'empresas',vehiculos:'vehiculos',bajas:'bajas',telegramas:'telegramas',maquinarias:'maquinarias'};
@@ -100,7 +100,20 @@ function $(id){return document.getElementById(id)} function esc(s){return String
 function setProgress(p,t){$('loadBar').style.width=p+'%';$('loadText').textContent=t;$('loadSteps').innerHTML+='<div>✅ '+esc(t)+'</div>'} function showSync(msg){const el=$('syncMiniStatus');el.textContent=msg;el.classList.add('show');clearTimeout(window.__syncMiniTimer);window.__syncMiniTimer=setTimeout(()=>el.classList.remove('show'),1600)}
 function userKeyMaster(){const n=norm(state.user&&state.user.name); if(n.includes('SERGIO'))return'sergio'; if(n.includes('EDUARDO'))return'eduardo'; if(n.includes('SORIO'))return'sorio'; return'matias'} function isAdmin(){return !!(state.user&&state.user.admin)} function masterWorksForUser(){return MASTER_WORKS[userKeyMaster()]||MASTER_WORKS.matias}
 function canonicalWork(v){const n=norm(v); if(n.includes('ARAUCO'))return'ARAUCO'; if(n.includes('NOURYON'))return'NOURYON'; if(n.includes('SWIFT'))return'SWIFT'; if(n.includes('TSM'))return'TSM'; if(n.includes('CENTRAL PUERTO'))return'CENTRAL PUERTO'; if(n.includes('CARGILL')||n==='PPA'||n.includes('PPA')||n.includes('P.A'))return'CARGILL VGG / PPA'; if(n.includes('LDC')||n.includes('DREYFUS'))return'LDC LAGOS / TIMBÚES'; if(n.includes('EVONIK'))return'EVONIK'; if(n.includes('ACINDAR'))return'ACINDAR'; if(n.includes('PAMPA'))return'PAMPA'; if(n.includes('BOORT'))return'BOORTMALT'; return''}
-function bucketOf(r){return uiBucket(r.bucket||r.record_type||r.type||'')} function rawBucketOf(r){return r.bucket||r.record_type||r.type||''} function recordWork(r){return canonicalWork([r.plant,r.planta,r.work,r.obra,r.name,r.nombre,r.display_name,r.raw&&r.raw.planta,r.raw&&r.raw.obra,r.raw&&r.raw.ultimaObra].join(' ')) || r.work || r.plant || ''} function canSee(r){if(isAdmin())return true; const cw=recordWork(r); return !!cw && masterWorksForUser().map(norm).includes(norm(cw))} function visibleRecords(bucket){let arr=state.records.filter(r=>(!bucket||bucketOf(r)===bucket)&&canSee(r)); const wf=$('workFilter')?$('workFilter').value:'TODAS'; if(wf&&wf!=='TODAS')arr=arr.filter(r=>norm(recordWork(r))===norm(wf)); return arr}
+function bucketOf(r){
+  const raw=r&&r.raw||{};
+  const rb=uiBucket(r&&((r.bucket)||(r.record_type)||(r.type))||'');
+  const logical=uiBucket(raw.modulo||raw.bucket||raw.tipoModulo||'');
+  if(['personas','monotributistas','empresas','vehiculos'].includes(logical))return logical;
+  return rb;
+}
+function rawBucketOf(r){return r&&((r.bucket)||(r.record_type)||(r.type))||''}
+function recordWork(r){
+  const raw=r&&r.raw||{};
+  return canonicalWork([r.plant,r.planta,r.work,r.obra,raw.planta,raw.obra,raw.ultimaObra,raw.work,raw.plant,r.name,r.nombre,r.display_name].join(' ')) || r.work || r.plant || raw.obra || raw.planta || '';
+}
+function canSee(r){if(isAdmin())return true; const cw=recordWork(r); return !!cw && masterWorksForUser().map(norm).includes(norm(cw))}
+function visibleRecords(bucket){let arr=state.records.filter(r=>(!bucket||bucketOf(r)===bucket)&&canSee(r)); const wf=$('workFilter')?$('workFilter').value:'TODAS'; if(wf&&wf!=='TODAS')arr=arr.filter(r=>norm(recordWork(r))===norm(wf)); return arr}
 function actionButtons(id){return '<div class="icon-actions"><button class="icon-btn view" title="Abrir" data-open="'+esc(id)+'">👁️</button><button class="icon-btn edit" title="Editar" data-open="'+esc(id)+'">✏️</button><button class="icon-btn delete" title="Eliminar" data-delete="'+esc(id)+'">🗑️</button></div>'}
 async function login(){const key=$('loginUser').value,pass=$('loginPass').value,user=USERS[key]; if(!user||user.pass!==pass){$('loginError').textContent='Usuario o contraseña incorrecta';$('loginError').classList.remove('hidden');return} state.user=user; $('loginScreen').classList.add('hidden');$('loaderScreen').classList.remove('hidden'); try{if(!window.supabase)throw new Error('No cargó la librería de Supabase. Revisá internet.'); supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); window.supa=supa; await loadAll(true); $('loaderScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('calendarToggle').classList.remove('hidden'); buildShell(); setView('dashboard',false); subscribeRealtime()}catch(e){console.error(e);setProgress(100,'Error: '+(e.message||e))}}
 async function loadAll(withProgress=false){if(withProgress)setProgress(10,'Conectando con Supabase'); const plants=await supa.from('alsi_plants').select('*').order('name'); if(plants.error)throw plants.error; state.plants=plants.data||[]; if(withProgress)setProgress(35,'Plantas cargadas'); const works=await supa.from('alsi_works').select('*').order('plant').order('name'); if(works.error)throw works.error; state.works=works.data||[]; if(withProgress)setProgress(55,'Obras cargadas'); const users=await supa.from('alsi_users').select('*'); if(!users.error)state.users=users.data||[]; const records=await supa.from('alsi_records').select('*').order('display_name'); if(records.error)throw records.error; state.records=records.data||[]; state.loaded=true; if(withProgress){setProgress(90,'Registros cargados');setProgress(100,'Listo')}}
@@ -120,9 +133,96 @@ function renderBucket(bucket){const l=BUCKETS[bucket]; $('pageTitle').textConten
 function drawBucket(bucket){const q=norm($('q')?.value||''); let rows=visibleRecords(bucket); if(q)rows=rows.filter(r=>norm([r.identifier,r.display_name,r.company,r.plant,r.work,JSON.stringify(r.raw||{})].join(' ')).includes(q)); $('rows').innerHTML=rows.slice(0,900).map(r=>'<tr><td><b>'+esc(r.identifier||'')+'</b></td><td>'+esc(r.display_name||'')+'</td><td>'+esc(r.company||'')+'</td><td>'+esc(recordWork(r)||r.plant||'')+'</td><td>'+esc(recordWork(r)||r.work||'')+'</td><td>'+recordStatus(r)+'</td><td>'+actionButtons(r.id)+'</td></tr>').join('')||'<tr><td colspan="7" class="empty">Sin resultados.</td></tr>'}
 function docsFor(bucket,plant){const p=state.plants.find(x=>norm(x.name)===norm(plant)); const pd=(p&&p.docs)||{}; let docs=pd[bucket]||pd[dbBucket(bucket)]||[]; if(!Array.isArray(docs))docs=Object.keys(docs||{}); return docs}
 function newRecord(bucket){const l=BUCKETS[bucket]; $('modalTitle').textContent=l.new.replace('+ ',''); $('modalBody').innerHTML='<div class="form-grid"><div class="field"><label>Obra</label><select id="n_work">'+masterWorksForUser().map(w=>'<option value="'+esc(w+'|'+w)+'">'+esc(w)+'</option>').join('')+'</select></div><div class="field"><label>'+l.idLabel+'</label><input id="n_identifier" class="input"></div><div class="field full"><label>Nombre</label><input id="n_name" class="input"></div><div class="field full"><label>Empresa / titular</label><input id="n_company" class="input" value="'+(bucket==='personas'?'A.L. Servicios Integrales S.A.':'')+'"></div><div class="field full"><label>Observaciones</label><textarea id="n_obs" class="input"></textarea></div></div><button class="btn primary" id="createRecordBtn">Crear en Supabase</button>'; $('createRecordBtn').addEventListener('click',()=>createRecord(bucket)); $('modal').classList.remove('hidden')}
-async function createRecord(bucket){const [plant,work]=$('n_work').value.split('|'),identifier=$('n_identifier').value.trim(),name=$('n_name').value.trim(),company=$('n_company').value.trim(); if(!identifier&&!name)return alert('Completá identificador o nombre'); const docs={}; docsFor(bucket,plant).forEach(d=>docs[d]={fecha:'',fechaCarga:todayStr(),obs:'',file:null}); const raw={id:uid('rec'),modulo:bucket,planta:plant,obra:work,nombre:name,empresa:company,observaciones:$('n_obs').value,docs}; const row={id:raw.id,bucket:dbBucket(bucket),plant,work,identifier,display_name:name,company,docs,raw}; const res=await supa.from('alsi_records').insert(row).select().single(); if(res.error)return alert('No se pudo crear el registro: '+res.error.message); state.records.push(res.data||row); closeModal(); render(); showSync('Registro creado en Supabase')}
+async function createRecord(bucket){
+  const btn=$('createRecordBtn');
+  if(btn){btn.disabled=true;btn.textContent='Guardando...'}
+  try{
+    const [plant,work]=$('n_work').value.split('|');
+    const identifier=$('n_identifier').value.trim();
+    const name=$('n_name').value.trim();
+    const company=$('n_company').value.trim();
+    if(!identifier&&!name){ alert('Completá identificador o nombre'); return; }
+
+    const dbb=dbBucket(bucket);
+    const docs={};
+    docsFor(bucket,plant).forEach(d=>docs[d]={fecha:'',fechaCarga:'',obs:'',file:null});
+
+    const raw={
+      id:uid('rec'),
+      modulo:bucket,
+      bucket_ui:bucket,
+      bucket_db:dbb,
+      planta:plant,
+      obra:work,
+      nombre:name,
+      empresa:company,
+      observaciones:$('n_obs').value,
+      docs:docs,
+      creadoDesde:'ALSI_REV28_ALTA_DIRECTA'
+    };
+
+    const baseRow={
+      bucket:dbb,
+      plant:plant,
+      work:work,
+      identifier:identifier,
+      display_name:name || identifier,
+      company:company,
+      docs:docs,
+      raw:raw
+    };
+
+    // Intento 1: dejar que Supabase genere el ID si la columna es UUID.
+    let res=await supa.from('alsi_records').insert(baseRow).select('*').single();
+
+    // Intento 2: si la tabla exige ID manual tipo texto, reintenta con ID propio.
+    if(res.error){
+      const msg=String(res.error.message||'');
+      const needsManualId=msg.toLowerCase().includes('id') || msg.toLowerCase().includes('null') || msg.toLowerCase().includes('uuid');
+      if(needsManualId){
+        const rowWithId=Object.assign({id:raw.id},baseRow);
+        res=await supa.from('alsi_records').insert(rowWithId).select('*').single();
+      }
+    }
+
+    if(res.error)throw res.error;
+
+    let finalRow=res.data||null;
+
+    // Verificación real por ID si volvió ID, o por datos clave si no volvió ID.
+    let check=null;
+    if(finalRow && finalRow.id){
+      check=await supa.from('alsi_records').select('*').eq('id',finalRow.id).maybeSingle();
+    }
+    if((!check || check.error || !check.data) && identifier){
+      check=await supa.from('alsi_records').select('*')
+        .eq('bucket',dbb)
+        .eq('identifier',identifier)
+        .eq('work',work)
+        .order('created_at',{ascending:false})
+        .limit(1)
+        .maybeSingle();
+    }
+    if(check && check.error)throw check.error;
+    finalRow=(check&&check.data)||finalRow;
+    if(!finalRow)throw new Error('Supabase respondió sin error, pero no devolvió ni encontró el registro creado.');
+
+    state.records=state.records.filter(r=>r.id!==finalRow.id);
+    state.records.unshift(finalRow);
+    closeModal();
+    await loadAll(false);
+    render();
+    showSync('Registro creado en Supabase');
+  }catch(e){
+    console.error('ALSI alta fallida REV28', e);
+    alert('No se creó en Supabase.\nDetalle: '+(e.message||JSON.stringify(e)));
+  }finally{
+    const btn=$('createRecordBtn');
+    if(btn){btn.disabled=false;btn.textContent='Crear en Supabase'}
+  }
+}
 function openRecord(id){const r=state.records.find(x=>x.id===id); if(!r)return; if((bucketOf(r)==='personas'||bucketOf(r)==='monotributistas')&&isActiveBajaRecord(r)){ $('modalTitle').textContent='Operario de Baja · '+(r.identifier||''); $('modalBody').innerHTML='<div class="modal-note"><b>operario de Baja</b><br>La carga documental está bloqueada hasta reincorporar el legajo.</div><button class="btn primary" data-reincorporar="'+esc(legajoOf(r))+'">♻️ Reincorporar personal</button> <button class="btn" id="close2">Cerrar</button>'; $('modal').classList.remove('hidden'); $('close2').addEventListener('click',closeModal); return; } $('modalTitle').textContent=labelBucket(bucketOf(r))+' · '+(r.identifier||'')+' · '+(r.display_name||''); $('modalBody').innerHTML='<div class="form-grid"><div class="field"><label>Tipo</label><select id="m_bucket" class="input">'+Object.entries(BUCKETS).map(([k,v])=>'<option value="'+k+'" '+(bucketOf(r)===k?'selected':'')+'>'+esc(v.title)+'</option>').join('')+'</select></div><div class="field"><label>Identificador</label><input id="m_identifier" class="input" value="'+esc(r.identifier||'')+'"></div><div class="field"><label>Nombre</label><input id="m_name" class="input" value="'+esc(r.display_name||'')+'"></div><div class="field"><label>Empresa</label><input id="m_company" class="input" value="'+esc(r.company||'')+'"></div><div class="field"><label>Planta</label><input id="m_plant" class="input" value="'+esc(r.plant||recordWork(r))+'"></div><div class="field"><label>Obra</label><input id="m_work" class="input" value="'+esc(r.work||recordWork(r))+'"></div><div class="field full"><label>Observaciones</label><textarea id="m_obs" class="input">'+esc((r.raw&&r.raw.observaciones)||'')+'</textarea></div></div><div class="panel"><div class="panel-head"><h3>Requerimientos</h3><button class="btn primary" id="addReqBtn">+ Agregar requisito</button></div><div class="table-wrap"><table class="req-table"><thead><tr><th>Requisito</th><th>Fecha de vencimiento</th><th>Fecha de carga</th><th>Semáforo</th><th>Acciones</th></tr></thead><tbody id="reqEditRows"></tbody></table></div></div><div style="display:flex;gap:10px;margin-top:16px"><button class="icon-btn save" id="saveRecordBtn" title="Guardar">💾</button><button class="icon-btn" id="close2" title="Cerrar">✖️</button></div>'; $('addReqBtn').addEventListener('click',()=>addReq());$('saveRecordBtn').addEventListener('click',()=>saveRecord(id));$('close2').addEventListener('click',closeModal); $('modal').classList.remove('hidden'); Object.entries(r.docs||{}).forEach(([k,v])=>addReq(k,typeof v==='object'?(v.fecha||v.valor||''):(v||''),typeof v==='object'?(v.fechaCarga||v.fecha_carga||''):''))}
-function addReq(name='',fecha='',carga=''){const id=uid('req'),tbody=$('reqEditRows'); tbody.insertAdjacentHTML('beforeend','<tr id="'+id+'"><td><input class="input req-name" value="'+esc(name)+'" placeholder="Requisito completo"></td><td><input class="input req-fecha" type="date" value="'+(/^\d{4}-\d{2}-\d{2}$/.test(fecha)?esc(fecha):'')+'"></td><td><input class="input req-carga" type="date" value="'+esc(carga||todayStr())+'"></td><td class="req-status">'+semaforo(fecha)+'</td><td><button class="icon-btn na set-na" title="N/A">N/A</button> <button class="icon-btn delete del-row" title="Eliminar">🗑️</button></td></tr>'); const tr=$(id); if(String(fecha).toUpperCase()==='NA')setNA(id); tr.querySelector('.req-fecha').addEventListener('change',()=>refreshReq(id));tr.querySelector('.set-na').addEventListener('click',()=>setNA(id));tr.querySelector('.del-row').addEventListener('click',()=>tr.remove())} function refreshReq(id){const tr=$(id);tr.querySelector('.req-status').innerHTML=semaforo(tr.dataset.na==='1'?'NA':tr.querySelector('.req-fecha').value)} function setNA(id){const tr=$(id),f=tr.querySelector('.req-fecha');tr.dataset.na='1';f.value='';f.disabled=true;refreshReq(id)}
+function addReq(name='',fecha='',carga=''){const id=uid('req'),tbody=$('reqEditRows'); tbody.insertAdjacentHTML('beforeend','<tr id="'+id+'"><td><input class="input req-name" value="'+esc(name)+'" placeholder="Requisito completo"></td><td><input class="input req-fecha" type="date" value="'+(/^\d{4}-\d{2}-\d{2}$/.test(fecha)?esc(fecha):'')+'"></td><td><input class="input req-carga" type="date" value="'+esc(carga||'')+'"></td><td class="req-status">'+semaforo(fecha)+'</td><td><button class="icon-btn na set-na" title="N/A">N/A</button> <button class="icon-btn delete del-row" title="Eliminar">🗑️</button></td></tr>'); const tr=$(id); if(String(fecha).toUpperCase()==='NA')setNA(id); tr.querySelector('.req-fecha').addEventListener('change',()=>refreshReq(id));tr.querySelector('.set-na').addEventListener('click',()=>setNA(id));tr.querySelector('.del-row').addEventListener('click',()=>tr.remove())} function refreshReq(id){const tr=$(id);tr.querySelector('.req-status').innerHTML=semaforo(tr.dataset.na==='1'?'NA':tr.querySelector('.req-fecha').value)} function setNA(id){const tr=$(id),f=tr.querySelector('.req-fecha');tr.dataset.na='1';f.value='';f.disabled=true;refreshReq(id)}
 async function saveRecord(id){const r=state.records.find(x=>x.id===id); if(!r)return; const docs={}; document.querySelectorAll('#reqEditRows tr').forEach(tr=>{const n=tr.querySelector('.req-name').value.trim(); if(n)docs[n]={fecha:tr.dataset.na==='1'?'NA':tr.querySelector('.req-fecha').value,fechaCarga:tr.querySelector('.req-carga').value,obs:'',file:null}}); const raw=Object.assign({},r.raw||{},{observaciones:$('m_obs').value,docs}); raw.modulo=$('m_bucket').value; const upd={bucket:dbBucket($('m_bucket').value),identifier:$('m_identifier').value,display_name:$('m_name').value,company:$('m_company').value,plant:$('m_plant').value,work:$('m_work').value,docs,raw}; const res=await supa.from('alsi_records').update(upd).eq('id',id).select().single(); if(res.error)return alert(res.error.message); Object.assign(r,res.data||upd); closeModal(); render(); showSync('Registro guardado en Supabase')}
 async function deleteRecord(id){if(!confirm('¿Eliminar este registro?'))return; const res=await supa.from('alsi_records').delete().eq('id',id); if(res.error)return alert(res.error.message); state.records=state.records.filter(r=>r.id!==id); render(); showSync('Registro eliminado de Supabase')}
 function closeModal(){$('modal').classList.add('hidden')} window.closeModal=closeModal;
@@ -178,7 +278,8 @@ function drawBajasPlanta(){let rows=allBajasPlanta(),f=$('bpEstado')?.value||'',
 async function saveBajaPlanta(){const p=state.records.find(x=>x.id===$('bpP').value); if(!p)return alert('Seleccioná un registro.'); const w=recordWork(p); const raw={id:uid('baja_planta'),tipoMovimiento:'baja_planta',legajo:p.identifier||'',nombre:p.display_name||'',fechaBajaPlanta:$('bpF').value,estadoPlanta:$('bpE').value,motivoPlanta:$('bpM').value||'Baja solicitada por planta',planta:w,obra:w,ultimaObra:w,observaciones:$('bpO').value,historial:[{fecha:new Date().toISOString(),accion:'baja_planta_creada',usuario:state.user&&state.user.name||'',estado:$('bpE').value}]}; const row={id:raw.id,bucket:'bajas',plant:w,work:w,identifier:p.identifier,display_name:p.display_name,company:p.company||'',docs:{},raw}; const res=await supa.from('alsi_records').insert(row).select().single(); if(res.error)return alert(res.error.message); state.records.push(res.data||row); closeModal(); renderBajasPlanta(); showSync('Baja de planta guardada en Supabase')}
 async function reincorporarLegajo(leg){if(!leg)return; if(!confirm('¿Reincorporar el legajo '+leg+' y habilitar nuevamente la carga documental?'))return; const base=state.records.find(r=>norm(legajoOf(r))===norm(leg)&&!isBajaGeneral(r)&&!isBajaPlanta(r)&&!isReincorporacion(r))||{}; const w=recordWork(base)||bajaWork(state.records.find(r=>norm(legajoOf(r))===norm(leg))||{}); const now=new Date().toISOString(); const raw={id:uid('reinc'),tipoMovimiento:'reincorporacion',alcance:'general_sistema',legajo:leg,nombre:base.display_name||'',fechaReincorporacion:todayStr(),fechaMovimiento:now,tsMovimiento:now,usuario:state.user&&state.user.name||'',observaciones:'Reincorporación general desde Bajas',historial:[{fecha:now,accion:'reincorporacion_general',usuario:state.user&&state.user.name||''}]}; const row={id:raw.id,bucket:'bajas',plant:'GENERAL',work:'GENERAL',identifier:leg,display_name:base.display_name||'',company:base.company||'',docs:{},raw}; const res=await supa.from('alsi_records').insert(row).select().single(); if(res.error)return alert(res.error.message); state.records.push(res.data||row); closeModal(); await refresh(true); render(); showSync('Personal reincorporado en Supabase')}
 document.addEventListener('click',function(e){const reinc=e.target.closest('[data-reincorporar]'); if(reinc)return reincorporarLegajo(reinc.dataset.reincorporar); const open=e.target.closest('[data-open]'); if(open)return openRecord(open.dataset.open); const del=e.target.closest('[data-delete]'); if(del)return deleteRecord(del.dataset.delete); const nw=e.target.closest('[data-new]'); if(nw)return newRecord(nw.dataset.new); const calOpen=e.target.closest('[data-cal-open]'); if(calOpen)return openCalendarRecord(calOpen.dataset.calOpen,calOpen.dataset.calBucket,calOpen.dataset.calWork,calOpen.dataset.calReq); const cal=e.target.closest('[data-cal]'); if(cal)return openCalDay(cal.dataset.cal)});
-document.addEventListener('DOMContentLoaded',function(){ $('loginBtn').addEventListener('click',login);$('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')login()});$('logoutBtn').addEventListener('click',()=>{location.reload()});$('closeModalBtn').addEventListener('click',closeModal);$('workFilter').addEventListener('change',render);$('syncCurrentViewBtn').addEventListener('click',()=>refresh());$('calendarToggle').addEventListener('click',()=>{$('calendar')?.classList.toggle('open')});document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view))); document.addEventListener('keydown',e=>{const isRefresh=e.key==='F5'||((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='r'); if(isRefresh&&state.loaded){e.preventDefault();refresh()}})});
+document.addEventListener('DOMContentLoaded',function(){ $('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+$('loginBtn').addEventListener('click',login);$('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')login()});$('logoutBtn').addEventListener('click',()=>{location.reload()});$('closeModalBtn').addEventListener('click',closeModal);$('workFilter').addEventListener('change',render);$('syncCurrentViewBtn').addEventListener('click',()=>refresh());$('calendarToggle').addEventListener('click',()=>{$('calendar')?.classList.toggle('open')});document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view))); document.addEventListener('keydown',e=>{const isRefresh=e.key==='F5'||((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='r'); if(isRefresh&&state.loaded){e.preventDefault();refresh()}})});
 })();
 </script>
 
