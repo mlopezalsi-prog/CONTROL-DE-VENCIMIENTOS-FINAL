@@ -170,6 +170,13 @@ tbody tr.alsi-row-selected td:first-child{font-weight:950;color:#1d4ed8;}
 @keyframes alLoaderBar{0%{width:18%}50%{width:72%}100%{width:28%}}
 @media(max-width:720px){.login-logo-al{width:min(185px,82%)}.brand-logo-al{width:62px}.al-view-loader{padding:23px 22px 22px!important}.al-logo-orbit{width:150px!important;height:112px!important}.al-loader-logo-img{width:136px!important}}
 
+
+/* ===== Dashboard tarjetas funcionales ===== */
+.dash-link,.dash-filter{cursor:pointer;position:relative;overflow:hidden}
+.dash-link::after,.dash-filter::after{content:'Abrir';position:absolute;right:12px;top:12px;font-size:10px;font-weight:950;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:4px 8px;opacity:0;transform:translateX(6px);transition:.14s ease}
+.dash-link:hover::after,.dash-filter:hover::after{opacity:1;transform:translateX(0)}
+.dash-filter.active{border-color:#60a5fa!important;box-shadow:0 0 0 3px rgba(37,99,235,.13),0 12px 28px rgba(15,23,42,.08)!important}
+
 </style>
 </head>
 <body>
@@ -210,7 +217,40 @@ function allDue(limit=999){const out=[]; ['personas','empresas','vehiculos'].for
 function dashboardAlert(f){const d=diffDays(f); if(d===null)return'<span class="semaforo gray">Sin fecha</span>'; if(d<0)return'<span class="semaforo red">Vencido</span>'; if(d<=7)return'<span class="semaforo red">'+d+' días</span>'; if(d<=12)return'<span class="semaforo yellow">'+d+' días</span>'; return'<span class="semaforo green">'+d+' días</span>'}
 function dueRowsByBucket(bucket,limit=12){const out=[]; visibleRecords(bucket).forEach(r=>Object.entries(r.docs||{}).forEach(([req,v])=>{const f=typeof v==='object'?(v.fecha||v.valor||''):(v||''); const d=diffDays(f); if(d!==null&&d<=12)out.push({bucket,r,req,f,d})})); return out.sort((a,b)=>a.d-b.d).slice(0,limit)}
 function dashboardPanel(bucket,title){const allRows=dueRowsByBucket(bucket,9999); const rows=allRows.slice(0,12); const venc=allRows.filter(x=>x.d<0).length, prox=allRows.filter(x=>x.d>=0&&x.d<=12).length; return '<div class="panel"><div class="panel-head"><div><h3>'+esc(title)+'</h3><p class="muted" style="margin:4px 0 0">Prioridad: vencidos por más días y luego próximos a vencer</p></div><div class="toolbar"><span class="tag red">'+venc+' vencidos</span><span class="tag yellow">'+prox+' próximos</span></div></div><div class="table-wrap"><table><thead><tr><th>Alerta</th><th>Registro</th><th>Requisito</th><th>Fecha</th><th>Acción</th></tr></thead><tbody>'+(rows.map(x=>'<tr><td>'+dashboardAlert(x.f)+'</td><td><b>'+esc(x.r.identifier||'')+'</b> · '+esc(x.r.display_name||'')+'<br><span class="muted">'+esc(recordWork(x.r))+'</span></td><td>'+esc(x.req)+'</td><td>'+esc(x.f)+'</td><td>'+actionButtons(x.r.id)+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Sin vencimientos próximos.</td></tr>')+'</tbody></table></div></div>'}
-function renderDashboard(){$('pageTitle').textContent='Panel de control';$('pageSub').textContent='Vencimientos próximos de tus obras'; const p=visibleRecords('personas'),e=visibleRecords('empresas'),v=visibleRecords('vehiculos'),st=statsFor([...p,...e,...v]); $('view').innerHTML='<div class="cards"><div class="card"><div class="kpi-label">Personal</div><div class="kpi-num">'+p.length+'</div></div><div class="card"><div class="kpi-label">Empresas</div><div class="kpi-num">'+e.length+'</div></div><div class="card"><div class="kpi-label">Vehículos</div><div class="kpi-num">'+v.length+'</div></div></div><div class="cards"><div class="card"><div class="kpi-label">Vencidos</div><div class="kpi-num" style="color:var(--red)">'+st.venc+'</div></div><div class="card"><div class="kpi-label">Próximos</div><div class="kpi-num" style="color:var(--yellow)">'+st.prox+'</div></div><div class="card"><div class="kpi-label">Documentos controlados</div><div class="kpi-num">'+st.total+'</div></div><div class="card"><div class="kpi-label">Obra seleccionada</div><div class="kpi-num" style="font-size:18px;margin-top:14px">'+esc(($('workFilter')&&$('workFilter').value)||'TODAS')+'</div></div></div>'+dashboardPanel('personas','Personal')+dashboardPanel('empresas','Empresa')+dashboardPanel('vehiculos','Vehículos')}
+function dashboardAllDocs(filter='total'){
+  const out=[];
+  ['personas','empresas','vehiculos'].forEach(bucket=>visibleRecords(bucket).forEach(r=>Object.entries(r.docs||{}).forEach(([req,v])=>{
+    const f=typeof v==='object'?(v.fecha||v.valor||''):(v||'');
+    const d=diffDays(f);
+    if(d===null)return;
+    if(filter==='vencidos' && d>=0)return;
+    if(filter==='proximos' && !(d>=0&&d<=12))return;
+    if(filter==='regla' && d<=12)return;
+    out.push({bucket,r,req,f,d});
+  })));
+  return out.sort((a,b)=>{
+    if(filter==='vencidos')return a.d-b.d;
+    if(filter==='proximos')return a.d-b.d;
+    if(filter==='regla')return b.d-a.d;
+    return a.d-b.d;
+  });
+}
+function dashboardDetailPanel(filter){
+  const titles={vencidos:'Detalle de vencidos',proximos:'Detalle de próximos a vencer',regla:'Detalle en regla',total:'Todos los documentos controlados'};
+  const notes={vencidos:'Ordenado por más días vencido primero.',proximos:'Ordenado por el vencimiento más cercano primero.',regla:'Documentación vigente con más de 12 días por delante.',total:'Listado general de documentación con fecha cargada.'};
+  const rows=dashboardAllDocs(filter);
+  return '<div class="panel" id="dashboardDetail"><div class="panel-head"><div><h3>'+esc(titles[filter]||titles.total)+'</h3><p class="muted" style="margin:4px 0 0">'+esc(notes[filter]||notes.total)+'</p></div><div class="toolbar"><span class="tag gray">'+rows.length+' registros</span><button class="btn" id="dashClearFilter">Ver resumen</button></div></div><div class="table-wrap"><table><thead><tr><th>Estado</th><th>Módulo</th><th>Registro</th><th>Obra</th><th>Requisito</th><th>Fecha</th><th>Días</th><th>Acción</th></tr></thead><tbody>'+(rows.slice(0,600).map(x=>'<tr><td>'+dashboardAlert(x.f)+'</td><td>'+esc(labelBucket(x.bucket))+'</td><td><b>'+esc(x.r.identifier||'')+'</b> · '+esc(x.r.display_name||'')+'</td><td>'+esc(recordWork(x.r))+'</td><td>'+esc(x.req)+'</td><td>'+esc(x.f)+'</td><td><b>'+esc(x.d<0?Math.abs(x.d)+' vencido':x.d+' restantes')+'</b></td><td>'+actionButtons(x.r.id)+'</td></tr>').join('')||'<tr><td colspan="8" class="empty">Sin registros para este filtro.</td></tr>')+'</tbody></table></div></div>';
+}
+function renderDashboard(){
+  $('pageTitle').textContent='Panel de control';$('pageSub').textContent='Vencimientos próximos de tus obras';
+  const p=visibleRecords('personas'),e=visibleRecords('empresas'),v=visibleRecords('vehiculos'),st=statsFor([...p,...e,...v]);
+  const enRegla=dashboardAllDocs('regla').length;
+  const active=window.__dashFilter||'';
+  $('view').innerHTML='<div class="cards"><div class="card dash-link" data-go-view="personas"><div class="kpi-label">Personal</div><div class="kpi-num">'+p.length+'</div><div class="muted">Abrir legajos</div></div><div class="card dash-link" data-go-view="empresas"><div class="kpi-label">Empresas</div><div class="kpi-num">'+e.length+'</div><div class="muted">Abrir empresas</div></div><div class="card dash-link" data-go-view="vehiculos"><div class="kpi-label">Vehículos</div><div class="kpi-num">'+v.length+'</div><div class="muted">Abrir vehículos</div></div></div><div class="cards"><div class="card dash-filter '+(active==='vencidos'?'active':'')+'" data-dash-filter="vencidos"><div class="kpi-label">Vencidos</div><div class="kpi-num" style="color:var(--red)">'+st.venc+'</div><div class="muted">Ver detalle</div></div><div class="card dash-filter '+(active==='proximos'?'active':'')+'" data-dash-filter="proximos"><div class="kpi-label">Próximos</div><div class="kpi-num" style="color:var(--yellow)">'+st.prox+'</div><div class="muted">Ver detalle</div></div><div class="card dash-filter '+(active==='regla'?'active':'')+'" data-dash-filter="regla"><div class="kpi-label">En regla</div><div class="kpi-num" style="color:var(--green)">'+enRegla+'</div><div class="muted">Ver detalle</div></div><div class="card dash-filter '+(active==='total'?'active':'')+'" data-dash-filter="total"><div class="kpi-label">Documentos controlados</div><div class="kpi-num">'+st.total+'</div><div class="muted">Ver todos</div></div></div><div class="cards"><div class="card"><div class="kpi-label">Obra seleccionada</div><div class="kpi-num" style="font-size:18px;margin-top:14px">'+esc(($('workFilter')&&$('workFilter').value)||'TODAS')+'</div></div></div>'+(active?dashboardDetailPanel(active):(dashboardPanel('personas','Personal')+dashboardPanel('empresas','Empresa')+dashboardPanel('vehiculos','Vehículos')));
+  document.querySelectorAll('[data-go-view]').forEach(c=>c.addEventListener('click',function(){window.__dashFilter='';setView(this.dataset.goView)}));
+  document.querySelectorAll('[data-dash-filter]').forEach(c=>c.addEventListener('click',function(){window.__dashFilter=this.dataset.dashFilter;renderDashboard(); setTimeout(()=>{const el=$('dashboardDetail'); if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},50)}));
+  const clear=$('dashClearFilter'); if(clear)clear.addEventListener('click',()=>{window.__dashFilter='';renderDashboard()});
+}
 function labelBucket(b){return BUCKETS[b]?.title||({bajas:'Bajas',telegramas:'Telegramas',bajasPlanta:'Bajas de planta',reincorporaciones:'Reincorporaciones'}[b]||b)}
 function legajoOf(r){return String(r.identifier||(r.raw&&r.raw.legajo)||'').trim()} function moveDate(r){const rr=r.raw||{};return rr.tsMovimiento||rr.fechaMovimiento||rr.fechaReincorporacion||rr.fechaBajaPlanta||rr.fechaBaja||rr.fecha||r.updated_at||r.created_at||''}
 function isReincorporacion(r){const b=bucketOf(r), rr=r.raw||{};return b==='reincorporaciones'||b==='reincorporacion'||norm(rr.tipoMovimiento||rr.tipo||'').includes('REINCORPOR')}
