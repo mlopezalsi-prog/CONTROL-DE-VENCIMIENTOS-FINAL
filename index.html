@@ -643,15 +643,7 @@ function examenesMedicosRows(){
     x.nombre=elegido;
     x.nombreOficial=nombreOficial;
     x.nameWarning=nombres.length>1;
-    x.tooltip='Legajo '+(x.legajo||'Sin legajo')+' detectado en:
-'+detalles.join('
-')+'
-
-Nombre usado en informe:
-'+elegido+'
-
-Acción sugerida:
-Unificar nombre en los registros correspondientes.';
+    x.tooltip='Legajo '+(x.legajo||'Sin legajo')+' detectado en:\n'+detalles.join('\n')+'\n\nNombre usado en informe:\n'+elegido+'\n\nAcción sugerida:\nUnificar nombre en los registros correspondientes.';
     return x;
   }).sort((a,b)=>a.d-b.d||String(a.nombre).localeCompare(String(b.nombre),'es',{numeric:true})||String(a.legajo).localeCompare(String(b.legajo),'es',{numeric:true}));
 }
