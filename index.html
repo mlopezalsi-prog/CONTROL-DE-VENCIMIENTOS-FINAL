@@ -624,14 +624,40 @@ function examenesMedicosRows(){
     if(!rango)return;
     const legajo=String(r.identifier||((r.raw||{}).legajo)||'').trim();
     const nombre=String(r.display_name||((r.raw||{}).nombre)||'').trim();
-    const key=[norm(legajo),norm(nombre),String(f||'')].join('|');
-    if(!map[key] || d<map[key].d){map[key]={legajo,nombre,vencimiento:f,d,rango,reqs:[req],r};}
-    else if(map[key].reqs&&!map[key].reqs.includes(req)){map[key].reqs.push(req);}
+    const legKey=norm(String(legajo||'').replace(/^0+/,''));
+    const key=legKey||('sinlegajo|'+norm(nombre)+'|'+String(f||''));
+    const src={obra:recordWork(r)||'Sin obra',nombre:nombre||'Sin nombre',vencimiento:f,req:req,recordId:r.id||'',d:d};
+    if(!map[key]){map[key]={legajo,nombre,vencimiento:f,d,rango,reqs:[req],r,sources:[src]};}
+    else{
+      map[key].sources.push(src);
+      if(!map[key].reqs.includes(req))map[key].reqs.push(req);
+      if(d<map[key].d){map[key].vencimiento=f;map[key].d=d;map[key].rango=rango;map[key].r=r;}
+    }
   })));
-  return Object.values(map).sort((a,b)=>a.d-b.d||String(a.nombre).localeCompare(String(b.nombre),'es',{numeric:true})||String(a.legajo).localeCompare(String(b.legajo),'es',{numeric:true}));
+  return Object.values(map).map(x=>{
+    const emp=(typeof findEmpByLegajo==='function'&&x.legajo)?findEmpByLegajo(x.legajo):null;
+    const nombres=[...new Set((x.sources||[]).map(s=>String(s.nombre||'').trim()).filter(Boolean))];
+    const nombreOficial=emp?empNombre(emp):'';
+    const elegido=nombreOficial||nombres.sort((a,b)=>b.length-a.length||a.localeCompare(b,'es',{numeric:true}))[0]||x.nombre||'';
+    const detalles=(x.sources||[]).map(s=>'• '+(s.obra||'Sin obra')+' — '+(s.nombre||'Sin nombre')+' — '+formatFechaAR(s.vencimiento)+' — '+s.req);
+    x.nombre=elegido;
+    x.nombreOficial=nombreOficial;
+    x.nameWarning=nombres.length>1;
+    x.tooltip='Legajo '+(x.legajo||'Sin legajo')+' detectado en:
+'+detalles.join('
+')+'
+
+Nombre usado en informe:
+'+elegido+'
+
+Acción sugerida:
+Unificar nombre en los registros correspondientes.';
+    return x;
+  }).sort((a,b)=>a.d-b.d||String(a.nombre).localeCompare(String(b.nombre),'es',{numeric:true})||String(a.legajo).localeCompare(String(b.legajo),'es',{numeric:true}));
 }
 function medRowsByRange(r){return examenesMedicosRows().filter(x=>x.rango===r)}
-function medTableHtml(rows){return rows.length?'<div class="table-wrap"><table><thead><tr><th>Legajo</th><th>Nombre y apellido</th><th>Vencimiento</th></tr></thead><tbody>'+rows.map(x=>'<tr><td><b>'+esc(x.legajo)+'</b></td><td>'+esc(x.nombre)+'</td><td>'+formatFechaAR(x.vencimiento)+'</td></tr>').join('')+'</tbody></table></div>':''}
+function medWarnHtml(x){return (canManageRequirementCatalog&&canManageRequirementCatalog()&&x&&x.nameWarning)?' <span class="tag yellow" title="'+esc(x.tooltip||'')+'" style="cursor:help">⚠ nombres</span>':''}
+function medTableHtml(rows){return rows.length?'<div class="table-wrap"><table><thead><tr><th>Legajo</th><th>Nombre y apellido</th><th>Vencimiento</th></tr></thead><tbody>'+rows.map(x=>'<tr><td><b>'+esc(x.legajo)+'</b></td><td>'+esc(x.nombre)+medWarnHtml(x)+'</td><td>'+formatFechaAR(x.vencimiento)+'</td></tr>').join('')+'</tbody></table></div>':''}
 function medSectionHtml(title,rows){return rows.length?'<h3 class="report-section-title med-range">'+title+' ('+rows.length+')</h3>'+medTableHtml(rows):''}
 function medicalRequirementNames(){const names=[]; Object.values(state.requirementCatalog||{}).forEach(x=>{if(x&&x.category==='EXAMEN_MEDICO'&&x.name&&!names.includes(x.name))names.push(x.name)}); return names.sort((a,b)=>a.localeCompare(b,'es',{numeric:true}))}
 function medCopyHtml(){let html='<div><p><b>Exámenes médicos próximos a vencer</b></p>'; const inc=medicalRequirementNames(); if(inc.length)html+='<p><b>Requerimientos incluidos:</b> '+inc.map(esc).join(', ')+'</p>'; ['Vencido','30 días','60 días','90 días'].forEach(g=>{const rows=medRowsByRange(g); if(!rows.length)return; html+='<p><b>'+g+' ('+rows.length+')</b></p><table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;font-family:Arial;font-size:13px"><thead><tr><th>Legajo</th><th>Nombre y apellido</th><th>Vencimiento</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.legajo)+'</td><td>'+esc(x.nombre)+'</td><td>'+formatFechaAR(x.vencimiento)+'</td></tr>').join('')+'</tbody></table><br>';}); return html+'</div>'}
@@ -642,7 +668,7 @@ function renderExamenesMedicos(){
   const incluidos=medicalRequirementNames();
   const includedHtml=incluidos.length?'<p class="med-report-sub"><b>Requerimientos incluidos:</b> '+incluidos.map(esc).join(', ')+'</p>':'<p class="med-report-sub"><b>Requerimientos incluidos:</b> No hay requisitos clasificados como examen médico.</p>';
   const sections=medSectionHtml('VENCIDOS',venc)+medSectionHtml('30 DÍAS',r30)+medSectionHtml('60 DÍAS',r60)+medSectionHtml('90 DÍAS',r90);
-  $('view').innerHTML='<div class="final-grid no-print"><div class="final-card"><div class="label">Vencidos</div><div class="num">'+venc.length+'</div></div><div class="final-card"><div class="label">30 días</div><div class="num">'+r30.length+'</div></div><div class="final-card"><div class="label">60 días</div><div class="num">'+r60.length+'</div></div><div class="final-card"><div class="label">90 días</div><div class="num">'+r90.length+'</div></div></div><div class="panel no-print"><div class="panel-head"><div><h3>📋 Informe para mail</h3><p class="muted" style="margin:4px 0 0">Sin duplicados: un solo renglón por Legajo + Nombre + Vencimiento.</p></div><div class="toolbar"><button class="btn primary" id="copyMedBtn">📋 Copiar tabla para mail</button><button class="btn" id="printMedBtn">🖨️ Imprimir / PDF</button></div></div></div><section class="report-sheet">'+(typeof informeMetaHtml==='function'?informeMetaHtml().replace('INFORME DE HABILITACIONES DOCUMENTALES','INFORME DE EXÁMENES MÉDICOS'):'')+'<h3 class="med-report-title">Exámenes médicos próximos a vencer</h3><p class="med-report-sub">Incluye únicamente requisitos clasificados globalmente como examen médico.</p>'+includedHtml+(sections||'<div class="med-empty">Sin exámenes médicos vencidos o próximos dentro de 90 días.</div>')+'<div class="report-footer">Generado automáticamente por Control de Vencimientos - AL Servicios Integrales S.A.</div></section>';
+  $('view').innerHTML='<div class="final-grid no-print"><div class="final-card"><div class="label">Vencidos</div><div class="num">'+venc.length+'</div></div><div class="final-card"><div class="label">30 días</div><div class="num">'+r30.length+'</div></div><div class="final-card"><div class="label">60 días</div><div class="num">'+r60.length+'</div></div><div class="final-card"><div class="label">90 días</div><div class="num">'+r90.length+'</div></div></div><div class="panel no-print"><div class="panel-head"><div><h3>📋 Informe para mail</h3><p class="muted" style="margin:4px 0 0">Sin duplicados: un solo renglón por legajo. Si hay varios vencimientos para el mismo legajo, se toma el más próximo.</p></div><div class="toolbar"><button class="btn primary" id="copyMedBtn">📋 Copiar tabla para mail</button><button class="btn" id="printMedBtn">🖨️ Imprimir / PDF</button></div></div></div><section class="report-sheet">'+(typeof informeMetaHtml==='function'?informeMetaHtml().replace('INFORME DE HABILITACIONES DOCUMENTALES','INFORME DE EXÁMENES MÉDICOS'):'')+'<h3 class="med-report-title">Exámenes médicos próximos a vencer</h3><p class="med-report-sub">Incluye únicamente requisitos clasificados globalmente como examen médico.</p>'+includedHtml+(sections||'<div class="med-empty">Sin exámenes médicos vencidos o próximos dentro de 90 días.</div>')+'<div class="report-footer">Generado automáticamente por Control de Vencimientos - AL Servicios Integrales S.A.</div></section>';
   $('copyMedBtn')?.addEventListener('click',copyExamenesMedicos); $('printMedBtn')?.addEventListener('click',()=>window.print());
 }
 function renderObras(){
