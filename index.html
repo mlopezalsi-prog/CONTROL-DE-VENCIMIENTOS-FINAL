@@ -577,7 +577,10 @@ function showChangePasswordModal(force){
     }
   };
 }
-async function login(){const key=$('loginUser').value,pass=$('loginPass').value,base=USERS[key]; $('loginError').classList.add('hidden'); if(!base){$('loginError').textContent='Usuario no encontrado';$('loginError').classList.remove('hidden');return} try{if(!window.supabase)throw new Error('No cargó la librería de Supabase. Revisá internet.'); supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); window.supa=supa; let dbUser=null; try{const res=await supa.from('alsi_users').select('*').eq('username',key).maybeSingle(); if(!res.error)dbUser=res.data}catch(e){console.warn('No se pudo leer alsi_users, uso login local',e)} if(dbUser&&(dbUser.is_active===false||String(dbUser.status||'').toUpperCase().includes('INACT'))){$('loginError').textContent='Usuario inactivo. Consultar a administración.';$('loginError').classList.remove('hidden');return} const ok=await verifyPassword(pass,dbUser,base); if(!ok){$('loginError').textContent='Usuario o contraseña incorrecta';$('loginError').classList.remove('hidden');return} state.user=normalizeDbUser(dbUser,base); $('loginScreen').classList.add('hidden');$('loaderScreen').classList.remove('hidden'); await loadAll(true); try{await supa.from('alsi_users').update({last_login:new Date().toISOString()}).eq('username',key)}catch(e){} await logActivity('Inicio de sesión',{usuario:key}); $('loaderScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('calendarToggle').classList.remove('hidden'); buildShell(); setView('dashboard',false); subscribeRealtime(); startIdleLock(); if(dbUser&&(dbUser.must_change_password===true||dbUser.must_change_password===null)){setTimeout(()=>showChangePasswordModal(true),500)}}catch(e){console.error(e);$('loginError').textContent='No se pudo iniciar sesión: '+(e.message||e);$('loginError').classList.remove('hidden');$('loaderScreen').classList.add('hidden');$('loginScreen').classList.remove('hidden')}}
+const LAST_LOGIN_USER_KEY='alsi_last_login_user_v1';
+function rememberLastLoginUser(key){try{localStorage.setItem(LAST_LOGIN_USER_KEY,String(key||''))}catch(e){}}
+function restoreLastLoginUser(){try{const key=localStorage.getItem(LAST_LOGIN_USER_KEY)||'',select=$('loginUser'); if(select&&key&&USERS[key]&&Array.from(select.options).some(o=>o.value===key))select.value=key}catch(e){}}
+async function login(){const key=$('loginUser').value,pass=$('loginPass').value,base=USERS[key]; $('loginError').classList.add('hidden'); if(!base){$('loginError').textContent='Usuario no encontrado';$('loginError').classList.remove('hidden');return} try{if(!window.supabase)throw new Error('No cargó la librería de Supabase. Revisá internet.'); supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); window.supa=supa; let dbUser=null; try{const res=await supa.from('alsi_users').select('*').eq('username',key).maybeSingle(); if(!res.error)dbUser=res.data}catch(e){console.warn('No se pudo leer alsi_users, uso login local',e)} if(dbUser&&(dbUser.is_active===false||String(dbUser.status||'').toUpperCase().includes('INACT'))){$('loginError').textContent='Usuario inactivo. Consultar a administración.';$('loginError').classList.remove('hidden');return} const ok=await verifyPassword(pass,dbUser,base); if(!ok){$('loginError').textContent='Usuario o contraseña incorrecta';$('loginError').classList.remove('hidden');return} state.user=normalizeDbUser(dbUser,base); rememberLastLoginUser(key); $('loginScreen').classList.add('hidden');$('loaderScreen').classList.remove('hidden'); await loadAll(true); try{await supa.from('alsi_users').update({last_login:new Date().toISOString()}).eq('username',key)}catch(e){} await logActivity('Inicio de sesión',{usuario:key}); $('loaderScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('calendarToggle').classList.remove('hidden'); buildShell(); setView('dashboard',false); subscribeRealtime(); startIdleLock(); if(dbUser&&(dbUser.must_change_password===true||dbUser.must_change_password===null)){setTimeout(()=>showChangePasswordModal(true),500)}}catch(e){console.error(e);$('loginError').textContent='No se pudo iniciar sesión: '+(e.message||e);$('loginError').classList.remove('hidden');$('loaderScreen').classList.add('hidden');$('loginScreen').classList.remove('hidden')}}
 function startIdleLock(){clearTimeout(window.__idleTimer); const reset=()=>{clearTimeout(window.__idleTimer);window.__idleTimer=setTimeout(()=>{if(state.user){alert('Sesión cerrada por inactividad.');location.reload()}},15*60*1000)}; ['click','mousemove','keydown','touchstart','scroll'].forEach(ev=>document.addEventListener(ev,reset,{passive:true})); reset();}
 window.alsiLogin=login;
 async function fetchAllRecords(){
@@ -630,7 +633,21 @@ function dashboardAllDocs(filter='total'){
     return a.d-b.d;
   });
 }
+function dashboardPendingReviewDocs(){
+  const out=[];
+  ['personas','empresas','vehiculos'].forEach(bucket=>visibleRecords(bucket).forEach(r=>Object.entries(r.docs||{}).forEach(([req,v])=>{
+    const carga=docLoadDate(v);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(carga||'')))return;
+    const f=typeof v==='object'?(v.fecha||v.valor||''):(v||'');
+    out.push({bucket,r,req,f,carga});
+  })));
+  return out.sort((a,b)=>String(b.carga).localeCompare(String(a.carga))||String(a.r.display_name||'').localeCompare(String(b.r.display_name||''),'es'));
+}
 function dashboardDetailPanel(filter){
+  if(filter==='revision'){
+    const pending=dashboardPendingReviewDocs();
+    return '<div class="panel" id="dashboardDetail"><div class="panel-head"><div><h3>Detalle de documentos sin revisar</h3><p class="muted" style="margin:4px 0 0">Documentos que muestran el triángulo porque tienen fecha de carga pendiente de revisión. Abrí el documento para controlarlo.</p></div><div class="toolbar"><span class="tag yellow">⚠ '+pending.length+' pendientes</span><button class="btn" id="dashClearFilter">Ver resumen</button></div></div><div class="table-wrap"><table><thead><tr><th>Alerta</th><th>Módulo</th><th>Registro</th><th>Obra</th><th>Documento</th><th>Fecha de carga</th><th>Vencimiento</th><th>Acción</th></tr></thead><tbody>'+(pending.slice(0,600).map(x=>'<tr><td><span class="tag yellow">⚠ Sin revisar</span></td><td>'+esc(labelBucket(x.bucket))+'</td><td><b>'+esc(x.r.identifier||'')+'</b> · '+esc(x.r.display_name||'')+'</td><td>'+esc(recordWork(x.r))+'</td><td><b>'+esc(x.req)+'</b></td><td>'+esc(formatFechaAR(x.carga))+'</td><td>'+esc(formatFechaAR(x.f)||'Sin fecha')+'</td><td><button class="btn primary" data-review-open="'+esc(x.r.id)+'" data-review-req="'+esc(x.req)+'">Abrir</button></td></tr>').join('')||'<tr><td colspan="8" class="empty">No hay documentos pendientes de revisión.</td></tr>')+'</tbody></table></div></div>';
+  }
   const titles={vencidos:'Detalle de vencidos',proximos:'Detalle de próximos a vencer',regla:'Detalle en regla',total:'Todos los documentos controlados'};
   const notes={vencidos:'Ordenado por más días vencido primero.',proximos:'Ordenado por el vencimiento más cercano primero.',regla:'Documentación vigente con más de 12 días por delante.',total:'Listado general de documentación con fecha cargada.'};
   const rows=dashboardAllDocs(filter);
@@ -692,6 +709,7 @@ function renderDashboard(){
   $('pageTitle').textContent='Panel de control';$('pageSub').textContent='Vencimientos próximos de tus obras';
   const p=visibleRecords('personas'),e=visibleRecords('empresas'),v=visibleRecords('vehiculos'),st=statsFor([...p,...e,...v]);
   const enRegla=dashboardAllDocs('regla').length;
+  const sinRevisar=dashboardPendingReviewDocs().length;
   const active=window.__dashFilter||'';
   const activeReq=window.__dashReqFilter||'';
   $('view').innerHTML='<div class="dashboard-kpis">'+
@@ -702,13 +720,14 @@ function renderDashboard(){
     '<div class="card dashboard-kpi kpi-red dash-filter '+(active==='vencidos'?'active':'')+'" data-dash-filter="vencidos"><div class="kpi-label">Vencidos</div><div class="kpi-num" style="color:var(--red)">'+st.venc+'</div><div class="muted">Ver detalle</div></div>'+
     '<div class="card dashboard-kpi kpi-yellow dash-filter '+(active==='proximos'?'active':'')+'" data-dash-filter="proximos"><div class="kpi-label">Próximos</div><div class="kpi-num" style="color:var(--yellow)">'+st.prox+'</div><div class="muted">Ver detalle</div></div>'+
     '<div class="card dashboard-kpi kpi-green dash-filter '+(active==='regla'?'active':'')+'" data-dash-filter="regla"><div class="kpi-label">En regla</div><div class="kpi-num" style="color:var(--green)">'+enRegla+'</div><div class="muted">Ver detalle</div></div>'+
-    '<div class="card dashboard-kpi kpi-slate dash-filter '+(active==='total'?'active':'')+'" data-dash-filter="total"><div class="kpi-label">Documentos controlados</div><div class="kpi-num">'+st.total+'</div><div class="muted">Ver todos</div></div>'+
+    '<div class="card dashboard-kpi kpi-slate dash-filter '+(active==='revision'?'active':'')+'" data-dash-filter="revision"><div class="kpi-label">Documentos sin revisar</div><div class="kpi-num" style="color:var(--yellow)">'+sinRevisar+'</div><div class="muted">⚠ Ver detalle</div></div>'+
     '</div>'+(active?dashboardDetailPanel(active):(dashboardPanel('personas','Personal')+dashboardPanel('empresas','Empresa')+dashboardPanel('vehiculos','Vehículos')));
   document.querySelectorAll('[data-go-view]').forEach(c=>c.addEventListener('click',function(){window.__dashFilter='';window.__dashReqFilter='';setView(this.dataset.goView)}));
   document.querySelectorAll('[data-dash-filter]').forEach(c=>c.addEventListener('click',function(){window.__dashFilter=this.dataset.dashFilter;window.__dashReqFilter='';renderDashboard(); setTimeout(()=>{const el=$('dashboardDetail'); if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},50)}));
   const clear=$('dashClearFilter'); if(clear)clear.addEventListener('click',()=>{window.__dashFilter='';window.__dashReqFilter='';renderDashboard()});
   document.querySelectorAll('[data-req-detail]').forEach(c=>c.addEventListener('click',function(e){e.preventDefault();window.__dashFilter='';window.__dashReqFilter=this.dataset.reqDetail;renderDashboard();setTimeout(()=>{const el=$('dashboardDetail'); if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},50)}));
   document.querySelectorAll('[data-req-open]').forEach(c=>c.addEventListener('click',function(e){e.preventDefault();openCalendarRecord(this.dataset.reqOpen,this.dataset.reqBucket,this.dataset.reqWork,this.dataset.reqName)}));
+  document.querySelectorAll('[data-review-open]').forEach(c=>c.addEventListener('click',function(e){e.preventDefault();openRecord(this.dataset.reviewOpen);setTimeout(()=>focusReqInModal(this.dataset.reviewReq),80)}));
 }
 function labelBucket(b){return BUCKETS[b]?.title||({bajas:'Bajas',telegramas:'Telegramas',bajasPlanta:'Bajas de planta',reincorporaciones:'Reincorporaciones'}[b]||b)}
 function legajoOf(r){return String(r.identifier||(r.raw&&r.raw.legajo)||'').trim()} function moveDate(r){const rr=r.raw||{};return rr.tsMovimiento||rr.fechaMovimiento||rr.fechaReincorporacion||rr.fechaBajaPlanta||rr.fechaBaja||rr.fecha||r.updated_at||r.created_at||''}
@@ -1421,6 +1440,7 @@ document.addEventListener('click',function(e){const portal=e.target.closest('[da
 
 const __alsiReadonlyObserver=new MutationObserver(()=>{try{applyReadOnlyLock()}catch(e){}});
 document.addEventListener('DOMContentLoaded',()=>{try{__alsiReadonlyObserver.observe(document.body,{childList:true,subtree:true});applyReadOnlyLock()}catch(e){}});
+document.addEventListener('DOMContentLoaded',restoreLastLoginUser);
 document.addEventListener('DOMContentLoaded',function(){ $('loginBtn').addEventListener('click',login);$('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')login()});$('logoutBtn').addEventListener('click',()=>{location.reload()});$('closeModalBtn').addEventListener('click',closeModal);$('workFilter').addEventListener('change',()=>{invalidateRecordCache();render(); const cal=$('calendar'); if(cal&&cal.classList.contains('open'))renderCalendar()});$('syncCurrentViewBtn').addEventListener('click',()=>refresh());$('calendarToggle').addEventListener('click',()=>{let cal=$('calendar'); if(!cal){renderCalendar(); cal=$('calendar')} cal.classList.toggle('open'); if(cal.classList.contains('open'))renderCalendar()});document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view))); document.addEventListener('keydown',e=>{const isRefresh=e.key==='F5'||((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='r'); if(isRefresh&&state.loaded){e.preventDefault();refresh()}})});
 })();
 </script>
