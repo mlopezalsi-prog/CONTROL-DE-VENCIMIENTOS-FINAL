@@ -343,6 +343,7 @@ body.readonly-mode .readonly-lock-note{display:block}
 <style id="alsi-unificacion-legajos-css">
 .unif-alert{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:16px;padding:12px 14px;margin:0 0 14px;font-size:13px}.unif-detail-card{border:1px solid #e2e8f0;border-radius:16px;background:#fff;margin:12px 0;overflow:hidden}.unif-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:12px 14px}.unif-detail-head b{font-size:15px}.unif-name-diff{font-weight:950;color:#b45309}.unif-name-ok{font-weight:950;color:#047857}.unif-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900}.unif-official{border-color:#bbf7d0;background:#ecfdf5;color:#047857}.unif-diff{border-color:#fde68a;background:#fffbeb;color:#b45309}
 </style>
+<script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div id="topProgress" class="top-progress" aria-hidden="true"><div id="topProgressBar" class="top-progress-bar"></div></div>
@@ -1376,62 +1377,127 @@ function informeRegistroRows(){
     return (ca-cb)||String(a.categoria).localeCompare(String(b.categoria))||String(a.nombre).localeCompare(String(b.nombre))||String(a.ident).localeCompare(String(b.ident));
   });
 }
-function informeFiltrado(){
-  let rows=informeRegistroRows();
-  const bucket=$('infBucket')?.value||'';
-  const condicion=$('infCondicion')?.value||'';
-  const q=norm($('infQ')?.value||'');
-  if(bucket) rows=rows.filter(x=>x.bucket===bucket);
-  if(condicion) rows=rows.filter(x=>x.condicion===condicion);
-  if(q) rows=rows.filter(x=>norm([x.condicion,x.categoria,x.ident,x.nombre,x.obra].join(' ')).includes(q));
+function informeDocumentoRows(){
+  const rows=[];
+  ['personas','empresas','vehiculos'].forEach(bucket=>visibleRecords(bucket).forEach(r=>{
+    const condicion=informeCondicionRegistro(r), ident=r.identifier||((r.raw||{}).legajo)||'', nombre=r.display_name||((r.raw||{}).nombre)||r.company||'', obra=recordWork(r)||r.work||r.plant||((r.raw||{}).obra)||'';
+    Object.entries(r.docs||{}).forEach(([req,v])=>{
+      const vencimiento=docFecha(v), carga=docLoadDate(v), dias=diffDays(vencimiento), sinAuditar=/^\d{4}-\d{2}-\d{2}$/.test(String(carga||''));
+      let estado='Sin fecha';
+      if(dias!==null)estado=dias<0?'Vencido':dias===0?'Vence hoy':dias<=30?'Próximo':'Vigente';
+      rows.push({bucket,categoria:informeBucketLabel(bucket),condicion,ident,nombre,obra,documento:req,vencimiento,carga,dias,sinAuditar,estado});
+    });
+  }));
   return rows;
 }
-function informeStats(rows){
-  const st={total:rows.length, habilitados:0, inhabilitados:0, personas:0, empresas:0, vehiculos:0};
-  rows.forEach(x=>{ if(x.condicion==='Inhabilitado')st.inhabilitados++; else st.habilitados++; st[x.bucket]=(st[x.bucket]||0)+1; });
-  return st;
+function informeFiltrosBase(rows){
+  const bucket=$('infBucket')?.value||'', condicion=$('infCondicion')?.value||'', q=norm($('infQ')?.value||'');
+  if(bucket)rows=rows.filter(x=>x.bucket===bucket);
+  if(condicion)rows=rows.filter(x=>x.condicion===condicion);
+  if(q)rows=rows.filter(x=>norm([x.condicion,x.categoria,x.ident,x.nombre,x.obra,x.documento,x.estado].join(' ')).includes(q));
+  return rows;
 }
-function informeMetaHtml(){
+function informeVistaActual(){
+  const modo=$('infModo')?.value||'estado';
+  if(modo==='estado')return {modo,rows:informeFiltrosBase(informeRegistroRows()),tipo:'registros'};
+  let rows=informeFiltrosBase(informeDocumentoRows()), horizonte=Number($('infHorizonte')?.value||30);
+  if(modo==='sin_auditar')rows=rows.filter(x=>x.sinAuditar).sort((a,b)=>String(b.carga).localeCompare(String(a.carga)));
+  if(modo==='cercanos')rows=rows.filter(x=>x.dias!==null&&x.dias>=0&&x.dias<=horizonte).sort((a,b)=>a.dias-b.dias);
+  if(modo==='vencidos')rows=rows.filter(x=>x.dias!==null&&x.dias<0).sort((a,b)=>a.dias-b.dias);
+  if(modo==='todos_vencimientos')rows=rows.filter(x=>x.dias!==null).sort((a,b)=>a.dias-b.dias);
+  return {modo,rows,tipo:'documentos'};
+}
+function informeStatsGerenciales(){
+  const registros=informeRegistroRows(), docs=informeDocumentoRows();
+  return{
+    registros:registros.length,
+    habilitados:registros.filter(x=>x.condicion==='Habilitado').length,
+    inhabilitados:registros.filter(x=>x.condicion==='Inhabilitado').length,
+    documentos:docs.length,
+    sinAuditar:docs.filter(x=>x.sinAuditar).length,
+    vencidos:docs.filter(x=>x.dias!==null&&x.dias<0).length,
+    proximos30:docs.filter(x=>x.dias!==null&&x.dias>=0&&x.dias<=30).length
+  };
+}
+function informeModoTitulo(modo){
+  return {estado:'Habilitados e inhabilitados',sin_auditar:'Documentos sin auditar',cercanos:'Vencimientos más cercanos',vencidos:'Todos los documentos vencidos',todos_vencimientos:'Todos los vencimientos'}[modo]||'Informe documental';
+}
+function informeMetaHtml(titulo='INFORME DE HABILITACIONES DOCUMENTALES'){
   const usuario=(state.user&&state.user.name)||'';
   const obra=($('workFilter')&&$('workFilter').value!=='TODAS')?$('workFilter').value:'Todas';
   const ahora=new Date();
-  return '<div class="report-print-head"><img class="report-print-logo" src="'+REPORT_LOGO+'" alt="AL Servicios Integrales"><div class="report-title-block"><h2>AL SERVICIOS INTEGRALES S.A.</h2><h3>INFORME DE HABILITACIONES DOCUMENTALES</h3></div><div class="meta"><b>Fecha:</b> '+ahora.toLocaleDateString('es-AR')+'<br><b>Hora:</b> '+ahora.toLocaleTimeString('es-AR')+'<br><b>Usuario:</b> '+esc(usuario)+'<br><b>Obra:</b> '+esc(obra)+'</div></div>';
+  return '<div class="report-print-head"><img class="report-print-logo" src="'+REPORT_LOGO+'" alt="AL Servicios Integrales"><div class="report-title-block"><h2>AL SERVICIOS INTEGRALES S.A.</h2><h3>'+esc(titulo)+'</h3></div><div class="meta"><b>Fecha:</b> '+ahora.toLocaleDateString('es-AR')+'<br><b>Hora:</b> '+ahora.toLocaleTimeString('es-AR')+'<br><b>Usuario:</b> '+esc(usuario)+'<br><b>Obra:</b> '+esc(obra)+'</div></div>';
 }
 function renderInformes(){
   $('pageTitle').textContent='Informes';
-  $('pageSub').textContent='Habilitados e inhabilitados documentales';
-  const rows=informeRegistroRows(), st=informeStats(rows);
+  $('pageSub').textContent='Análisis gerencial, auditoría y vencimientos';
+  const st=informeStatsGerenciales();
   $('view').innerHTML=
-    '<div class="panel no-print"><div class="modal-body"><div class="form-grid" style="margin-bottom:0"><div class="field"><label>Categoría</label><select id="infBucket" class="input"><option value="">Todas las categorías</option><option value="personas">Personal</option><option value="empresas">Empresa</option><option value="vehiculos">Vehículos</option></select></div><div class="field"><label>Condición</label><select id="infCondicion" class="input"><option value="">Habilitados e inhabilitados</option><option>Habilitado</option><option>Inhabilitado</option></select></div><div class="field full"><label>Buscar</label><input id="infQ" class="input" placeholder="Buscar legajo, nombre u obra..."></div></div><div class="report-actions" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" id="infPrint">🖨️ Imprimir / PDF</button><button class="btn" id="infCsv">⬇️ Excel CSV</button></div></div></div>'+ 
-    '<section class="report-sheet">'+informeMetaHtml()+
-    '<h3 class="report-section-title">RESUMEN GENERAL</h3><div class="report-summary"><div class="summary-box total"><div class="summary-icon">👥</div><div><span>Total registros</span><b id="infTotal">'+st.total+'</b></div></div><div class="summary-box ok"><div class="summary-icon">✓</div><div><span>Habilitados</span><b id="infOk">'+st.habilitados+'</b></div></div><div class="summary-box bad"><div class="summary-icon">×</div><div><span>Inhabilitados</span><b id="infBad">'+st.inhabilitados+'</b></div></div></div>'+ 
-    '<div class="report-mini-counts"><span>Personal: <b id="infCntPersonas">'+st.personas+'</b></span><span>Empresa: <b id="infCntEmp">'+st.empresas+'</b></span><span>Vehículos: <b id="infCntVeh">'+st.vehiculos+'</b></span></div>'+ 
-    '<h3 class="report-section-title">DETALLE DE REGISTROS</h3><div class="table-wrap"><table class="report-table"><thead><tr><th>Condición</th><th>Categoría</th><th>Leg / ID</th><th>Nombre</th><th>Obra</th></tr></thead><tbody id="infRows"></tbody></table></div>'+ 
+    '<div class="panel no-print"><div class="modal-body"><div class="form-grid" style="margin-bottom:0"><div class="field"><label>Tipo de informe</label><select id="infModo" class="input"><option value="estado">Habilitados / Inhabilitados</option><option value="sin_auditar">Documentos sin auditar</option><option value="cercanos">Vencimientos más cercanos</option><option value="vencidos">Todos los documentos vencidos</option><option value="todos_vencimientos">Todos los vencimientos</option></select></div><div class="field"><label>Horizonte para próximos</label><select id="infHorizonte" class="input"><option value="7">7 días</option><option value="15">15 días</option><option value="30" selected>30 días</option><option value="40">40 días</option><option value="60">60 días</option><option value="90">90 días</option><option value="36500">Todos los futuros</option></select></div><div class="field"><label>Categoría</label><select id="infBucket" class="input"><option value="">Todas las categorías</option><option value="personas">Personal</option><option value="empresas">Empresa</option><option value="vehiculos">Vehículos</option></select></div><div class="field"><label>Condición</label><select id="infCondicion" class="input"><option value="">Habilitados e inhabilitados</option><option>Habilitado</option><option>Inhabilitado</option></select></div><div class="field full"><label>Buscar</label><input id="infQ" class="input" placeholder="Buscar legajo, nombre, obra o documento..."></div></div><div class="report-actions" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" id="infPrint">🖨️ Imprimir / PDF</button><button class="btn" id="infExcel">📊 Descargar Excel completo</button></div></div></div>'+
+    '<section class="report-sheet">'+informeMetaHtml('INFORME GERENCIAL DOCUMENTAL')+
+    '<h3 class="report-section-title">RESUMEN EJECUTIVO</h3><div class="report-summary"><div class="summary-box total"><div class="summary-icon">👥</div><div><span>Registros</span><b>'+st.registros+'</b></div></div><div class="summary-box ok"><div class="summary-icon">✓</div><div><span>Habilitados</span><b>'+st.habilitados+'</b></div></div><div class="summary-box bad"><div class="summary-icon">×</div><div><span>Inhabilitados</span><b>'+st.inhabilitados+'</b></div></div></div>'+
+    '<div class="report-mini-counts"><span>Documentos: <b>'+st.documentos+'</b></span><span>Sin auditar: <b style="color:var(--yellow)">'+st.sinAuditar+'</b></span><span>Vencidos: <b style="color:var(--red)">'+st.vencidos+'</b></span><span>Próximos 30 días: <b>'+st.proximos30+'</b></span></div>'+
+    '<h3 class="report-section-title" id="infDetalleTitulo">DETALLE</h3><p class="med-report-sub" id="infDetalleNota"></p><div class="table-wrap"><table class="report-table"><thead id="infHead"></thead><tbody id="infRows"></tbody></table></div>'+
     '<div class="report-reference"><b>REFERENCIA</b><br><span class="ref-ok">● HABILITADO:</span> Sin documentación vencida. <span class="ref-bad">● INHABILITADO:</span> Posee al menos un documento vencido.</div><div class="report-footer">Generado automáticamente por Control de Vencimientos - AL Servicios Integrales S.A.</div></section>';
-  ['infBucket','infCondicion','infQ'].forEach(id=>$(id)?.addEventListener('input',drawInformes));
+  ['infModo','infHorizonte','infBucket','infCondicion','infQ'].forEach(id=>$(id)?.addEventListener('input',drawInformes));
   $('infPrint')?.addEventListener('click',()=>window.print());
-  $('infCsv')?.addEventListener('click',exportInformeCsv);
+  $('infExcel')?.addEventListener('click',exportInformeExcel);
   drawInformes();
 }
 function drawInformes(){
-  const rows=informeFiltrado(), st=informeStats(rows);
-  if($('infTotal')) $('infTotal').textContent=st.total;
-  if($('infOk')) $('infOk').textContent=st.habilitados;
-  if($('infBad')) $('infBad').textContent=st.inhabilitados;
-  if($('infCntPersonas')) $('infCntPersonas').textContent=st.personas;
-  if($('infCntEmp')) $('infCntEmp').textContent=st.empresas;
-  if($('infCntVeh')) $('infCntVeh').textContent=st.vehiculos;
-  $('infRows').innerHTML=rows.map(x=>'<tr><td>'+informeCondicionPill(x.condicion)+'</td><td>'+esc(x.categoria)+'</td><td><b>'+esc(x.ident)+'</b></td><td>'+esc(x.nombre)+'</td><td>'+esc(x.obra)+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Sin registros para el filtro seleccionado.</td></tr>';
+  const vista=informeVistaActual(),rows=vista.rows,modo=vista.modo;
+  $('infHorizonte').disabled=modo!=='cercanos';
+  $('infDetalleTitulo').textContent=informeModoTitulo(modo).toUpperCase()+' · '+rows.length;
+  $('infDetalleNota').textContent=modo==='cercanos'?'Ordenado por el vencimiento futuro más próximo dentro del horizonte seleccionado.':modo==='sin_auditar'?'Coincide con los documentos que muestran el triángulo de revisión.':'Vista actual según los filtros seleccionados.';
+  if(vista.tipo==='registros'){
+    $('infHead').innerHTML='<tr><th>Condición</th><th>Categoría</th><th>Leg / ID</th><th>Nombre</th><th>Obra</th></tr>';
+    $('infRows').innerHTML=rows.map(x=>'<tr><td>'+informeCondicionPill(x.condicion)+'</td><td>'+esc(x.categoria)+'</td><td><b>'+esc(x.ident)+'</b></td><td>'+esc(x.nombre)+'</td><td>'+esc(x.obra)+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Sin registros para el filtro seleccionado.</td></tr>';
+  }else{
+    $('infHead').innerHTML='<tr><th>Estado</th><th>Condición</th><th>Categoría</th><th>Leg / ID</th><th>Nombre</th><th>Obra</th><th>Documento</th><th>Vencimiento</th><th>Días</th><th>Fecha carga</th></tr>';
+    $('infRows').innerHTML=rows.slice(0,1200).map(x=>'<tr><td><span class="tag '+(x.dias!==null&&x.dias<0?'red':x.sinAuditar?'yellow':'green')+'">'+esc(x.sinAuditar?'⚠ Sin auditar':x.estado)+'</span></td><td>'+informeCondicionPill(x.condicion)+'</td><td>'+esc(x.categoria)+'</td><td><b>'+esc(x.ident)+'</b></td><td>'+esc(x.nombre)+'</td><td>'+esc(x.obra)+'</td><td>'+esc(x.documento)+'</td><td>'+esc(formatFechaAR(x.vencimiento)||'Sin fecha')+'</td><td>'+esc(x.dias===null?'-':x.dias<0?Math.abs(x.dias)+' vencido':x.dias+' restantes')+'</td><td>'+esc(formatFechaAR(x.carga)||'-')+'</td></tr>').join('')||'<tr><td colspan="10" class="empty">Sin documentos para el filtro seleccionado.</td></tr>';
+  }
 }
-function exportInformeCsv(){
-  const rows=informeFiltrado();
-  const head=['Condicion','Categoria','Leg/ID','Nombre','Obra','Fecha hora informe','Usuario'];
-  const usuario=(state.user&&state.user.name)||'';
-  const fechaHora=new Date().toLocaleString('es-AR');
-  const data=[head].concat(rows.map(x=>[x.condicion,x.categoria,x.ident,x.nombre,x.obra,fechaHora,usuario]));
-  const csv=data.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');
-  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}), a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='informe_habilitaciones_'+todayStr()+'.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+function informeExcelRegistro(x){return {'Condición':x.condicion,'Categoría':x.categoria,'Legajo / ID':x.ident,'Nombre':x.nombre,'Obra':x.obra}}
+function informeExcelDocumento(x){return {'Estado documental':x.estado,'Condición registro':x.condicion,'Categoría':x.categoria,'Legajo / ID':x.ident,'Nombre':x.nombre,'Obra':x.obra,'Documento':x.documento,'Vencimiento':formatFechaAR(x.vencimiento)||'','Días al vencimiento':x.dias===null?'':x.dias,'Fecha de carga':formatFechaAR(x.carga)||'','Auditoría':x.sinAuditar?'Sin auditar':''}}
+function informeResumenObras(){
+  const map={};
+  informeRegistroRows().forEach(x=>{const k=x.obra||'Sin obra'; if(!map[k])map[k]={Obra:k,Registros:0,Habilitados:0,Inhabilitados:0,Documentos:0,'Sin auditar':0,Vencidos:0,'Próximos 30 días':0}; map[k].Registros++;map[k][x.condicion==='Habilitado'?'Habilitados':'Inhabilitados']++});
+  informeDocumentoRows().forEach(x=>{const k=x.obra||'Sin obra'; if(!map[k])map[k]={Obra:k,Registros:0,Habilitados:0,Inhabilitados:0,Documentos:0,'Sin auditar':0,Vencidos:0,'Próximos 30 días':0}; const o=map[k];o.Documentos++;if(x.sinAuditar)o['Sin auditar']++;if(x.dias!==null&&x.dias<0)o.Vencidos++;if(x.dias!==null&&x.dias>=0&&x.dias<=30)o['Próximos 30 días']++});
+  return Object.values(map).sort((a,b)=>b.Inhabilitados-a.Inhabilitados||b.Vencidos-a.Vencidos||a.Obra.localeCompare(b.Obra,'es'));
+}
+function informeSetSheet(wb,name,data,widths){
+  const ws=XLSX.utils.json_to_sheet(data.length?data:[{Información:'Sin registros'}]);
+  ws['!cols']=(widths||[]).map(w=>({wch:w}));
+  if(ws['!ref'])ws['!autofilter']={ref:ws['!ref']};
+  XLSX.utils.book_append_sheet(wb,ws,name.slice(0,31));
+}
+function exportInformeExcel(){
+  if(!window.XLSX)return alert('No se pudo cargar el generador de Excel. Revisá la conexión a internet y volvé a intentar.');
+  const registros=informeRegistroRows(),docs=informeDocumentoRows(),st=informeStatsGerenciales(),vista=informeVistaActual(),usuario=(state.user&&state.user.name)||'',obra=($('workFilter')&&$('workFilter').value)||'TODAS',ahora=new Date();
+  const wb=XLSX.utils.book_new();
+  const resumen=[
+    {Indicador:'INFORME GERENCIAL DOCUMENTAL',Valor:''},
+    {Indicador:'Fecha y hora',Valor:ahora.toLocaleString('es-AR')},
+    {Indicador:'Usuario',Valor:usuario},
+    {Indicador:'Obra seleccionada',Valor:obra},
+    {Indicador:'Tipo de informe visible',Valor:informeModoTitulo(vista.modo)},
+    {Indicador:'Registros totales',Valor:st.registros},
+    {Indicador:'Habilitados',Valor:st.habilitados},
+    {Indicador:'Inhabilitados',Valor:st.inhabilitados},
+    {Indicador:'Documentos controlados',Valor:st.documentos},
+    {Indicador:'Documentos sin auditar',Valor:st.sinAuditar},
+    {Indicador:'Documentos vencidos',Valor:st.vencidos},
+    {Indicador:'Próximos a vencer en 30 días',Valor:st.proximos30}
+  ];
+  informeSetSheet(wb,'Resumen Gerencial',resumen,[34,28]);
+  informeSetSheet(wb,'Resumen por Obra',informeResumenObras(),[28,12,14,16,14,14,12,20]);
+  informeSetSheet(wb,'Registros',registros.map(informeExcelRegistro),[16,15,14,34,28]);
+  informeSetSheet(wb,'Detalle Documental',docs.map(informeExcelDocumento),[18,20,14,14,32,26,28,16,18,16,16]);
+  informeSetSheet(wb,'Sin Auditar',docs.filter(x=>x.sinAuditar).map(informeExcelDocumento),[18,20,14,14,32,26,28,16,18,16,16]);
+  informeSetSheet(wb,'Vencidos',docs.filter(x=>x.dias!==null&&x.dias<0).sort((a,b)=>a.dias-b.dias).map(informeExcelDocumento),[18,20,14,14,32,26,28,16,18,16,16]);
+  informeSetSheet(wb,'Próximos 30 días',docs.filter(x=>x.dias!==null&&x.dias>=0&&x.dias<=30).sort((a,b)=>a.dias-b.dias).map(informeExcelDocumento),[18,20,14,14,32,26,28,16,18,16,16]);
+  informeSetSheet(wb,'Vista Filtrada',vista.tipo==='registros'?vista.rows.map(informeExcelRegistro):vista.rows.map(informeExcelDocumento),vista.tipo==='registros'?[16,15,14,34,28]:[18,20,14,14,32,26,28,16,18,16,16]);
+  XLSX.writeFile(wb,'informe_gerencial_documental_'+todayStr()+'.xlsx',{compression:true});
 }
 
 document.addEventListener('click',function(e){const db=e.target.closest('[data-delete-baja]'); if(db){e.preventDefault(); if(blockWrite())return; return deleteBajaGeneral(db.dataset.deleteBaja);} const ob=e.target.closest('[data-open-baja]'); if(ob){e.preventDefault(); return openBajaExpediente(ob.dataset.openBaja);} const ot=e.target.closest('[data-open-track]'); if(ot){e.preventDefault(); return openTracking(ot.dataset.openTrack,ot.dataset.trackNum||'');} const cp=e.target.closest('[data-copy-track]'); if(cp){e.preventDefault(); return copyTracking(cp.dataset.copyTrack||'');}});
