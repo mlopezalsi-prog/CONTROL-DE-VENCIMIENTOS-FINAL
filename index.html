@@ -1569,12 +1569,17 @@ function informeFiltrosBase(rows){
 function informeVistaActual(){
   const modo=$('infModo')?.value||'estado';
   if(modo==='estado')return {modo,rows:informeFiltrosBase(informeRegistroRows()),tipo:'registros'};
-  let rows=informeFiltrosBase(informeDocumentoRows()), horizonte=Number($('infHorizonte')?.value||30);
+  let rows=informeFiltrosBase(informeDocumentoRows()), horizonte=informeLimiteDias();
   if(modo==='sin_auditar')rows=rows.filter(x=>x.sinAuditar).sort((a,b)=>String(b.carga).localeCompare(String(a.carga)));
   if(modo==='cercanos')rows=rows.filter(x=>x.dias!==null&&x.dias>=0&&x.dias<=horizonte).sort((a,b)=>a.dias-b.dias);
   if(modo==='vencidos')rows=rows.filter(x=>x.dias!==null&&x.dias<0).sort((a,b)=>a.dias-b.dias);
   if(modo==='todos_vencimientos')rows=rows.filter(x=>x.dias!==null).sort((a,b)=>a.dias-b.dias);
   return {modo,rows,tipo:'documentos'};
+}
+function informeLimiteDias(){
+  const campo=$('infHorizonte'), valor=Number(campo?.value);
+  if(!Number.isFinite(valor))return 30;
+  return Math.max(0,Math.min(36500,Math.floor(valor)));
 }
 function informeStatsGerenciales(){
   const registros=informeRegistroRows(), docs=informeDocumentoRows();
@@ -1589,7 +1594,7 @@ function informeStatsGerenciales(){
   };
 }
 function informeModoTitulo(modo){
-  return {estado:'Habilitados e inhabilitados',sin_auditar:'Documentos sin auditar',cercanos:'Vencimientos más cercanos',vencidos:'Todos los documentos vencidos',todos_vencimientos:'Todos los vencimientos'}[modo]||'Informe documental';
+  return {estado:'Habilitados e inhabilitados',sin_auditar:'Documentos sin auditar',cercanos:'Próximos a vencer',vencidos:'Todos los documentos vencidos',todos_vencimientos:'Todos los vencimientos'}[modo]||'Informe documental';
 }
 function informeMetaHtml(titulo='INFORME DE HABILITACIONES DOCUMENTALES'){
   const usuario=(state.user&&state.user.name)||'';
@@ -1602,13 +1607,12 @@ function renderInformes(){
   $('pageSub').textContent='Análisis gerencial, auditoría y vencimientos';
   const st=informeStatsGerenciales();
   $('view').innerHTML=
-    '<div class="panel no-print"><div class="modal-body"><div class="form-grid" style="margin-bottom:0"><div class="field"><label>Tipo de informe</label><select id="infModo" class="input"><option value="estado">Habilitados / Inhabilitados</option><option value="sin_auditar">Documentos sin auditar</option><option value="cercanos">Vencimientos más cercanos</option><option value="vencidos">Todos los documentos vencidos</option><option value="todos_vencimientos">Todos los vencimientos</option></select></div><div class="field"><label>Horizonte para próximos</label><select id="infHorizonte" class="input"><option value="7">7 días</option><option value="15">15 días</option><option value="30" selected>30 días</option><option value="40">40 días</option><option value="60">60 días</option><option value="90">90 días</option><option value="36500">Todos los futuros</option></select></div><div class="field"><label>Categoría</label><select id="infBucket" class="input"><option value="">Todas las categorías</option><option value="personas">Personal</option><option value="empresas">Empresa</option><option value="vehiculos">Vehículos</option></select></div><div class="field"><label>Condición</label><select id="infCondicion" class="input"><option value="">Habilitados e inhabilitados</option><option>Habilitado</option><option>Inhabilitado</option></select></div><div class="field full"><label>Buscar</label><input id="infQ" class="input" placeholder="Buscar legajo, nombre, obra o documento..."></div></div><div class="report-actions" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" id="infPrint">🖨️ Imprimir / PDF</button><button class="btn" id="infExcel">📊 Descargar Excel completo</button></div></div></div>'+
+    '<div class="panel no-print"><div class="modal-body"><div class="form-grid" style="margin-bottom:0"><div class="field"><label>Tipo de informe</label><select id="infModo" class="input"><option value="estado">Habilitados / Inhabilitados</option><option value="sin_auditar">Documentos sin auditar</option><option value="cercanos">Próximos a vencer</option><option value="vencidos">Todos los documentos vencidos</option><option value="todos_vencimientos">Todos los vencimientos</option></select></div><div class="field" id="infHorizonteField"><label>Límite de días para próximos</label><input id="infHorizonte" class="input" type="number" min="0" max="36500" step="1" value="30" list="infHorizonteOpciones" placeholder="Ej: 45"><datalist id="infHorizonteOpciones"><option value="7"></option><option value="15"></option><option value="30"></option><option value="40"></option><option value="60"></option><option value="90"></option></datalist><span class="muted">Podés escribir cualquier cantidad de días.</span></div><div class="field"><label>Categoría</label><select id="infBucket" class="input"><option value="">Todas las categorías</option><option value="personas">Personal</option><option value="empresas">Empresa</option><option value="vehiculos">Vehículos</option></select></div><div class="field"><label>Condición</label><select id="infCondicion" class="input"><option value="">Habilitados e inhabilitados</option><option>Habilitado</option><option>Inhabilitado</option></select></div><div class="field full"><label>Buscar</label><input id="infQ" class="input" placeholder="Buscar legajo, nombre, obra o documento..."></div></div><div class="report-actions" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" id="infPrint">🖨️ Imprimir / PDF</button><button class="btn" id="infExcel">📊 Descargar Excel completo</button></div></div></div>'+
     '<section class="report-sheet">'+informeMetaHtml('INFORME GERENCIAL DOCUMENTAL')+
     '<h3 class="report-section-title">RESUMEN EJECUTIVO</h3><div class="report-summary"><div class="summary-box total"><div class="summary-icon">👥</div><div><span>Registros</span><b>'+st.registros+'</b></div></div><div class="summary-box ok"><div class="summary-icon">✓</div><div><span>Habilitados</span><b>'+st.habilitados+'</b></div></div><div class="summary-box bad"><div class="summary-icon">×</div><div><span>Inhabilitados</span><b>'+st.inhabilitados+'</b></div></div></div>'+
-    '<div class="report-mini-counts"><span>Documentos: <b>'+st.documentos+'</b></span><span>Sin auditar: <b style="color:var(--yellow)">'+st.sinAuditar+'</b></span><span>Vencidos: <b style="color:var(--red)">'+st.vencidos+'</b></span><span>Próximos 30 días: <b>'+st.proximos30+'</b></span></div>'+
+    '<div class="report-mini-counts"><span>Documentos: <b>'+st.documentos+'</b></span><span>Sin auditar: <b style="color:var(--yellow)">'+st.sinAuditar+'</b></span><span>Vencidos: <b style="color:var(--red)">'+st.vencidos+'</b></span><span>Próximos <b id="infProximosDias">30</b> días: <b id="infProximosCount">'+st.proximos30+'</b></span></div>'+
     '<h3 class="report-section-title" id="infDetalleTitulo">DETALLE</h3><p class="med-report-sub" id="infDetalleNota"></p><div class="table-wrap"><table class="report-table"><thead id="infHead"></thead><tbody id="infRows"></tbody></table></div>'+
     '<div class="report-reference"><b>REFERENCIA</b><br><span class="ref-ok">● HABILITADO:</span> Sin documentación vencida. <span class="ref-bad">● INHABILITADO:</span> Posee al menos un documento vencido.</div><div class="report-footer">Generado automáticamente por Control de Vencimientos - AL Servicios Integrales S.A.</div></section>';
-  const horizonteField=$('infHorizonte').closest('.field');horizonteField.innerHTML='<label>Límite de días para próximos</label><input id="infHorizonte" class="input" type="number" min="0" max="36500" step="1" value="30" placeholder="Ej: 45"><span class="muted">Ingresá libremente la cantidad de días.</span>';
   const requisitos=[...new Set(informeDocumentoRows().map(x=>x.documento).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true})),reqField=document.createElement('div');reqField.className='field';reqField.innerHTML='<label>Requisito de la obra seleccionada</label><select id="infRequisito" class="input"><option value="">Todos los requisitos</option>'+requisitos.map(x=>'<option>'+esc(x)+'</option>').join('')+'</select>';
   $('infQ').closest('.field').before(reqField);
   ['infModo','infHorizonte','infBucket','infCondicion','infRequisito','infQ'].forEach(id=>$(id)?.addEventListener('input',drawInformes));
@@ -1618,10 +1622,13 @@ function renderInformes(){
 }
 function drawInformes(){
   const vista=informeVistaActual(),rows=vista.rows,modo=vista.modo;
-  $('infHorizonte').disabled=modo!=='cercanos';
+  const limite=informeLimiteDias(),campoLimite=$('infHorizonte'),campoDias=$('infProximosDias'),campoCantidad=$('infProximosCount');
+  if(campoLimite)campoLimite.setAttribute('aria-describedby','infDetalleNota');
+  if(campoDias)campoDias.textContent=limite;
+  if(campoCantidad)campoCantidad.textContent=informeFiltrosBase(informeDocumentoRows()).filter(x=>x.dias!==null&&x.dias>=0&&x.dias<=limite).length;
   const tabla=$('infRows').closest('table');tabla.classList.toggle('report-doc',vista.tipo==='documentos');
   $('infDetalleTitulo').textContent=informeModoTitulo(modo).toUpperCase()+' · '+rows.length;
-  $('infDetalleNota').textContent=modo==='cercanos'?'Ordenado por el vencimiento futuro más próximo dentro del horizonte seleccionado.':modo==='sin_auditar'?'Coincide con los documentos que muestran el triángulo de revisión.':'Vista actual según los filtros seleccionados.';
+  $('infDetalleNota').textContent=modo==='cercanos'?'Se muestran los documentos que vencen desde hoy hasta dentro de '+limite+' días, ordenados por el más próximo. Podés cambiar el límite cuando quieras.':modo==='sin_auditar'?'Coincide con los documentos que muestran el triángulo de revisión. El límite de días queda disponible para cuando elijas Próximos a vencer.':'Vista actual según los filtros seleccionados. El límite de días se aplica al elegir Próximos a vencer.';
   if(vista.tipo==='registros'){
     $('infHead').innerHTML='<tr><th>Condición</th><th>Categoría</th><th>Leg / ID</th><th>Nombre</th><th>Obra</th></tr>';
     $('infRows').innerHTML=rows.map(x=>'<tr><td>'+informeCondicionPill(x.condicion)+'</td><td>'+esc(x.categoria)+'</td><td><b>'+esc(x.ident)+'</b></td><td>'+esc(x.nombre)+'</td><td>'+esc(x.obra)+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Sin registros para el filtro seleccionado.</td></tr>';
@@ -1650,7 +1657,7 @@ function informeExcelTelegramas(){return telegramasVisibles().map(t=>{const r=t.
 function informeExcelBajas(){return (state.records||[]).filter(x=>['bajas','baja'].includes(bucketOf(x))).map(b=>{const r=b.raw||{},emp=findEmpByLegajo(r.legajo||b.identifier);return {'Legajo':r.legajo||b.identifier||'','Nombre':r.nombre||b.display_name||'','DNI':r.documento||empVal(emp,'Documento'),'CUIL':empVal(emp,'CUIL'),'Fecha de baja':formatFechaAR(r.fechaBaja)||'','Gremio':r.gremio||'','Estado':r.estado||'','Movimiento':r.movimiento||'','Obra':r.ultimaObra||recordWork(b)||'','Observaciones':r.observaciones||''}})}
 function exportInformeExcel(){
   if(!window.XLSX)return alert('No se pudo cargar el generador de Excel. Revisá la conexión a internet y volvé a intentar.');
-  const registros=informeRegistroRows(),docs=informeDocumentoRows(),st=informeStatsGerenciales(),vista=informeVistaActual(),usuario=(state.user&&state.user.name)||'',obra=($('workFilter')&&$('workFilter').value)||'TODAS',requisito=$('infRequisito')?.value||'Todos',horizonte=$('infHorizonte')?.value||'30',ahora=new Date();
+  const registros=informeRegistroRows(),docs=informeDocumentoRows(),st=informeStatsGerenciales(),vista=informeVistaActual(),usuario=(state.user&&state.user.name)||'',obra=($('workFilter')&&$('workFilter').value)||'TODAS',requisito=$('infRequisito')?.value||'Todos',horizonte=informeLimiteDias(),ahora=new Date();
   const wb=XLSX.utils.book_new();
   const resumen=[
     {Indicador:'INFORME GERENCIAL DOCUMENTAL',Valor:''},
@@ -1666,7 +1673,7 @@ function exportInformeExcel(){
     {Indicador:'Documentos controlados',Valor:st.documentos},
     {Indicador:'Documentos sin auditar',Valor:st.sinAuditar},
     {Indicador:'Documentos vencidos',Valor:st.vencidos},
-    {Indicador:'Próximos a vencer en 30 días',Valor:st.proximos30}
+    {Indicador:'Próximos a vencer en '+horizonte+' días',Valor:docs.filter(x=>x.dias!==null&&x.dias>=0&&x.dias<=horizonte).length}
   ];
   informeSetSheet(wb,'Resumen Gerencial',resumen,[34,28]);
   informeSetSheet(wb,'Resumen por Obra',informeResumenObras(),[28,12,14,16,14,14,12,20]);
