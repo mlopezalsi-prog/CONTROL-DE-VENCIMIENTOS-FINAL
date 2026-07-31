@@ -345,6 +345,18 @@ body.readonly-mode .readonly-lock-note{display:block}
 <style id="alsi-unificacion-legajos-css">
 .unif-alert{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:16px;padding:12px 14px;margin:0 0 14px;font-size:13px}.unif-detail-card{border:1px solid #e2e8f0;border-radius:16px;background:#fff;margin:12px 0;overflow:hidden}.unif-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:12px 14px}.unif-detail-head b{font-size:15px}.unif-name-diff{font-weight:950;color:#b45309}.unif-name-ok{font-weight:950;color:#047857}.unif-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900}.unif-official{border-color:#bbf7d0;background:#ecfdf5;color:#047857}.unif-diff{border-color:#fde68a;background:#fffbeb;color:#b45309}
 </style>
+<style id="alsi-loader-circular">
+#loaderScreen{background:radial-gradient(circle at center,#ffffff 0,#fffdf8 42%,#f8f4ec 100%)}
+#loaderScreen .loader-card{position:relative;width:220px;height:220px;padding:0;border:0;border-radius:50%;background:transparent;box-shadow:none;display:grid;place-items:center}
+#loaderScreen .loader-card>*:not(.loader-logo-al){display:none!important}
+#loaderScreen .loader-card::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,#00547c 0 24%,#5eaf55 24% 49%,#f2c94c 49% 74%,#ed3348 74% 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 8px),#000 0);mask:radial-gradient(farthest-side,transparent calc(100% - 8px),#000 0);animation:alsiCircularLoad 1.15s linear infinite;filter:drop-shadow(0 7px 12px rgba(15,23,42,.12))}
+#loaderScreen .loader-card::after{content:"";position:absolute;inset:18px;border-radius:50%;background:#fff;box-shadow:0 16px 45px rgba(15,23,42,.10)}
+#loaderScreen .loader-logo-al{position:relative;z-index:2;width:132px;height:auto;margin:0!important;object-fit:contain;animation:alsiLogoPulse 1.6s ease-in-out infinite;filter:drop-shadow(0 7px 10px rgba(15,23,42,.10))}
+@keyframes alsiCircularLoad{to{transform:rotate(360deg)}}
+@keyframes alsiLogoPulse{0%,100%{transform:scale(.98);opacity:.92}50%{transform:scale(1.03);opacity:1}}
+@media(max-width:520px){#loaderScreen .loader-card{width:180px;height:180px}#loaderScreen .loader-logo-al{width:108px}}
+@media(prefers-reduced-motion:reduce){#loaderScreen .loader-card::before{animation-duration:2.8s}#loaderScreen .loader-logo-al{animation:none}}
+</style>
 <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -1431,6 +1443,37 @@ async function saveTelegramaSeguimiento(id){if(blockWrite())return;const t=state
 async function saveTelegramaSeguimientoEstado(id,idx){if(blockWrite())return;const t=state.records.find(x=>x.id===id);if(!t)return;const raw=Object.assign({},t.raw||{});raw.seguimientos=[...(raw.seguimientos||[])];raw.seguimientos[idx]=Object.assign({},raw.seguimientos[idx]||{},{estado:document.querySelector('[data-tel-seg-idx="'+idx+'"]').value,actualizado:new Date().toISOString(),usuario:state.user&&state.user.name||''});await updateTelegramaRaw(t,raw,'Estado postal actualizado')}
 async function saveTelegramaEstadoLaboral(id){if(blockWrite())return;const t=state.records.find(x=>x.id===id);if(!t)return;const raw=Object.assign({},t.raw||{},{fechaBaja:$('teFechaBaja').value,gremio:$('teGremio').value,estadoLaboral:$('teEstadoLaboral').value});await updateTelegramaRaw(t,raw,'Estado laboral actualizado')}
 async function deleteTelegramaSeguimiento(id,idx){if(blockWrite())return;if(!confirm('¿Eliminar este seguimiento?'))return;const t=state.records.find(x=>x.id===id);if(!t)return;const raw=Object.assign({},t.raw||{});raw.seguimientos=[...(raw.seguimientos||[])];raw.seguimientos.splice(idx,1);await updateTelegramaRaw(t,raw,'Seguimiento eliminado')}
+
+/* Vista única de Bajas e Intimaciones */
+function gestionLaboralRows(){
+  const bajas=bajaGeneralList().map(r=>({clase:'baja_legacy',tipo:'baja',r})),telegramas=telegramasVisibles().map(r=>({clase:'telegrama',tipo:telegramaTipo(r)==='intimacion'?'intimacion':'baja',r}));
+  return bajas.concat(telegramas).sort((a,b)=>{const fa=(a.r.raw||{}).fechaEnvio||(a.r.raw||{}).fechaBaja||(a.r.raw||{}).fecha||a.r.created_at||'',fb=(b.r.raw||{}).fechaEnvio||(b.r.raw||{}).fechaBaja||(b.r.raw||{}).fecha||b.r.created_at||'';return String(fb).localeCompare(String(fa))});
+}
+function gestionLaboralCerrado(x){if(x.clase==='telegrama')return telegramaCerrado(x.r);const r=x.r.raw||{};return ['Firmó todo','Todo OK'].includes(canonEstado(r.estado||''))&&segPendientesCount(x.r)===0}
+function nuevoMovimientoLaboral(){
+  $('modalTitle').textContent='Nuevo';$('modalBody').innerHTML='<div class="modal-note"><b>Elegí el tipo de gestión</b><br>El sistema abrirá el formulario correspondiente.</div><div class="form-grid"><div class="field full"><label>Tipo</label><select id="ngTipo" class="input"><option value="baja">Baja</option><option value="intimacion">Intimación</option></select></div></div><button class="btn primary" id="ngContinuar">Continuar</button> <button class="btn" id="ngCerrar">Cerrar</button>';$('ngContinuar').addEventListener('click',()=>{const tipo=$('ngTipo').value;newTelegrama();$('ntTipo').value=tipo==='baja'?'despido':'intimacion';$('ntTipo').dispatchEvent(new Event('change'));$('modalTitle').textContent=tipo==='baja'?'Nueva baja':'Nueva intimación'});$('ngCerrar').addEventListener('click',closeModal);$('modal').classList.remove('hidden');
+}
+renderBajas=function(){
+  if(!canViewBajas())return blockBajas();$('pageTitle').textContent='Bajas e intimaciones';$('pageSub').textContent='Gestión laboral y seguimiento postal en una sola vista';
+  const all=gestionLaboralRows(),bajas=all.filter(x=>x.tipo==='baja').length,intimaciones=all.filter(x=>x.tipo==='intimacion').length,cerrados=all.filter(gestionLaboralCerrado).length,abiertos=all.length-cerrados;
+  $('view').innerHTML='<div class="final-grid"><div class="final-card" data-gestion-tipo="baja"><div class="label">Bajas</div><div class="num">'+bajas+'</div></div><div class="final-card" data-gestion-tipo="intimacion"><div class="label">Intimaciones</div><div class="num">'+intimaciones+'</div></div><div class="final-card" data-gestion-cierre="abierto"><div class="label">Abiertos</div><div class="num">'+abiertos+'</div></div><div class="final-card" data-gestion-cierre="cerrado"><div class="label">Cerrados</div><div class="num">'+cerrados+'</div></div></div><div class="panel"><div class="panel-head"><div><h3>Bajas e intimaciones</h3><p class="muted" style="margin:4px 0 0">Todos los expedientes laborales en un solo listado.</p></div><div class="toolbar"><select id="glTipo" class="input"><option value="">Bajas e intimaciones</option><option value="baja">Bajas</option><option value="intimacion">Intimaciones</option></select><select id="glCierre" class="input"><option value="">Abiertos y cerrados</option><option value="abierto">Abiertos</option><option value="cerrado">Cerrados</option></select><input id="glQ" class="input" style="width:220px" placeholder="Buscar legajo, nombre o N°"><button class="btn primary" id="glNuevo">➕ Nuevo</button></div></div><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Destinatario</th><th>Fecha</th><th>Gremio / N°</th><th>Estado actual</th><th>Seguimiento</th><th>Acciones</th></tr></thead><tbody id="glRows"></tbody></table></div></div>';
+  $('glTipo').addEventListener('change',drawGestionLaboral);$('glCierre').addEventListener('change',drawGestionLaboral);$('glQ').addEventListener('input',drawGestionLaboral);$('glNuevo').addEventListener('click',nuevoMovimientoLaboral);document.querySelectorAll('[data-gestion-tipo]').forEach(x=>x.addEventListener('click',()=>{$('glTipo').value=x.dataset.gestionTipo;drawGestionLaboral()}));document.querySelectorAll('[data-gestion-cierre]').forEach(x=>x.addEventListener('click',()=>{$('glCierre').value=x.dataset.gestionCierre;drawGestionLaboral()}));drawGestionLaboral();
+};
+function drawGestionLaboral(){
+  let rows=gestionLaboralRows(),tipo=$('glTipo')?.value||'',cierre=$('glCierre')?.value||'',q=norm($('glQ')?.value||'');if(tipo)rows=rows.filter(x=>x.tipo===tipo);if(cierre)rows=rows.filter(x=>(gestionLaboralCerrado(x)?'cerrado':'abierto')===cierre);if(q)rows=rows.filter(x=>norm([x.r.identifier,x.r.display_name,JSON.stringify(x.r.raw||{})].join(' ')).includes(q));
+  $('glRows').innerHTML=rows.map(x=>{const r=x.r.raw||{},esTel=x.clase==='telegrama',fecha=r.fechaEnvio||r.fechaBaja||r.fecha||'',seg=esTel?telegramaSeguimientos(x.r):bajaSeguimientos(x.r),estado=esTel?telegramaEstadoActualHtml(x.r):pill(r.estado||''),detalle=x.tipo==='baja'?'Baja':'Intimación',dato=x.tipo==='baja'?(r.gremio||'-'):(r.numeroTelegrama||'-'),open=esTel?'<button class="btn primary" data-open-telegrama="'+esc(x.r.id)+'">Abrir expediente</button>':'<button class="btn primary" data-open-baja="'+esc(x.r.id)+'">Abrir expediente</button>';return '<tr><td><span class="tag gray">'+detalle+'</span></td><td><b>'+esc(x.r.identifier||r.legajo||'-')+' · '+esc(x.r.display_name||r.destinatario||r.nombre||'')+'</b></td><td>'+esc(formatFechaAR(fecha)||fecha||'-')+'</td><td>'+esc(dato)+'</td><td>'+estado+'</td><td><span class="tag '+(seg.length?'yellow':'gray')+'">'+seg.length+' movimientos</span></td><td>'+open+' <button class="icon-btn delete" data-delete-gestion="'+esc(x.r.id)+'">🗑️</button></td></tr>'}).join('')||'<tr><td colspan="7" class="empty">No hay expedientes para los filtros seleccionados.</td></tr>';
+  document.querySelectorAll('[data-open-telegrama]').forEach(b=>b.addEventListener('click',()=>openTelegramaExpediente(b.dataset.openTelegrama)));document.querySelectorAll('[data-delete-gestion]').forEach(b=>b.addEventListener('click',()=>deleteGestionLaboral(b.dataset.deleteGestion)));
+}
+async function deleteGestionLaboral(id){if(blockWrite())return;if(!confirm('¿Eliminar este expediente?'))return;const res=await supa.from('alsi_records').delete().eq('id',id);if(res.error)return alert(res.error.message);state.records=state.records.filter(x=>x.id!==id);renderBajas();showSync('Expediente eliminado')}
+
+/* Telegramas no tiene un menú separado: siempre vuelve a la vista unificada */
+function ensureTelegramasNav(){
+  const btn=$('nav-telegramas');if(btn)btn.remove();
+}
+const __buildShellAntesTelegramas=buildShell;buildShell=function(){__buildShellAntesTelegramas();ensureTelegramasNav()};
+const __setViewAntesTelegramas=setView;setView=function(v,doRefresh=true){
+  if(v==='telegramas')v='bajas';return __setViewAntesTelegramas(v,doRefresh);
+};window.setView=setView;
 
 
 const __alsiRenderOriginal = render;
