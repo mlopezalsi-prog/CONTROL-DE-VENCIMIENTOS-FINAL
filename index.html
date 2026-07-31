@@ -150,7 +150,9 @@ tbody tr.alsi-row-selected td:first-child{font-weight:950;color:var(--brand-gree
   .report-print-head h2{margin:0;font-size:20px;color:#0f172a}.report-print-head .meta{font-size:11px;color:#334155;text-align:right;line-height:1.45}
   .table-wrap{overflow:visible!important}table{font-size:10.5px!important}th,td{padding:7px!important}th{background:#f1f5f9!important;color:#334155!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .semaforo,.status-pill,.cond-pill{font-size:9.5px!important;padding:4px 6px!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  @page{size:A4 landscape;margin:10mm}
+  .report-table.report-doc{font-size:7.5px!important}.report-table.report-doc th,.report-table.report-doc td{padding:4px!important;word-break:break-word}
+  .report-table.report-doc th:nth-child(2),.report-table.report-doc td:nth-child(2),.report-table.report-doc th:nth-child(3),.report-table.report-doc td:nth-child(3),.report-table.report-doc th:nth-child(6),.report-table.report-doc td:nth-child(6),.report-table.report-doc th:nth-child(10),.report-table.report-doc td:nth-child(10){display:none}
+  @page{size:A4 portrait;margin:10mm}
 }
 
 
@@ -767,6 +769,27 @@ function drawBucket(bucket){
 function docsFor(bucket,plant){const p=state.plants.find(x=>norm(x.name)===norm(plant)); let docs=((p&&p.docs)||{})[bucket]||[]; if(!Array.isArray(docs))docs=Object.keys(docs||{}); return docs}
 function newRecord(bucket){if(isReadOnly())return alert('Usuario solo lectura: no puede crear registros.'); const l=BUCKETS[bucket]; $('modalTitle').textContent=l.new.replace('+ ',''); $('modalBody').dataset.recordBucket=bucket; $('modalBody').innerHTML='<div class="form-grid"><div class="field"><label>Obra</label><select id="n_work">'+masterWorksForUser().map(w=>'<option value="'+esc(w+'|'+w)+'">'+esc(w)+'</option>').join('')+'</select></div><div class="field"><label>'+l.idLabel+'</label><input id="n_identifier" class="input"></div><div class="field full"><label>Nombre</label><input id="n_name" class="input"></div><div class="field full"><label>Empresa / titular</label><input id="n_company" class="input" value="'+(bucket==='personas'?'A.L. Servicios Integrales S.A.':'')+'"></div>'+(bucket==='empresas'&&canAccessCompanyPortals()?'<div class="field full"><label>Portal de ingreso de la fábrica</label><input id="n_portal" class="input" type="url" placeholder="https://portal.fabricante.com"><div class="portal-note">Podés pegar el enlace completo o escribir el dominio.</div></div>':'')+'<div class="field full"><label>Observaciones</label><textarea id="n_obs" class="input"></textarea></div></div><div class="form-actions"><button class="btn primary" id="createRecordBtn">Guardar</button><button class="btn" id="cancelNewRecordBtn">Cancelar</button></div>'; $('createRecordBtn').addEventListener('click',()=>createRecord(bucket)); $('cancelNewRecordBtn').addEventListener('click',closeModal); $('modal').classList.remove('hidden')}
 async function createRecord(bucket){if(blockWrite())return;if(isReadOnly())return alert('Usuario solo lectura: no puede crear registros.'); const [plant,work]=$('n_work').value.split('|'),identifier=$('n_identifier').value.trim(),name=$('n_name').value.trim(),company=$('n_company').value.trim(),portalInput=bucket==='empresas'&&canAccessCompanyPortals()?String($('n_portal')?.value||'').trim():'',portalUrl=normalizePortalUrl(portalInput); if(!identifier&&!name)return alert('Completá identificador o nombre'); if(portalInput&&!portalUrl)return alert('El enlace del portal no es válido.'); const docs={}; docsFor(bucket,plant).forEach(d=>docs[d]={fecha:'',fechaCarga:'',obs:'',file:null}); const raw={id:uid('rec'),planta:plant,obra:work,nombre:name,empresa:company,observaciones:$('n_obs').value,docs}; if(bucket==='empresas'&&canAccessCompanyPortals())raw.portalUrl=portalUrl; const row={id:raw.id,bucket,plant,work,identifier,display_name:name,company,docs,raw}; const res=await supa.from('alsi_records').insert(row).select().single(); if(res.error)return alert(res.error.message); state.records.push(res.data||row); closeModal(); render(); showSync('Registro creado en Supabase')}
+function antiguedadDesdeFecha(f){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(f||'')))return'';const a=new Date(f+'T00:00:00'),h=new Date();let meses=(h.getFullYear()-a.getFullYear())*12+h.getMonth()-a.getMonth();if(h.getDate()<a.getDate())meses--;meses=Math.max(0,meses);return Math.floor(meses/12)+' años '+(meses%12)+' meses'}
+const __newRecordOriginal=newRecord,__createRecordOriginal=createRecord;
+newRecord=function(bucket){
+  if(bucket!=='personas')return __newRecordOriginal(bucket);
+  if(isReadOnly())return alert('Usuario solo lectura: no puede crear registros.');
+  $('modalTitle').textContent='Nuevo legajo';$('modalBody').dataset.recordBucket=bucket;
+  $('modalBody').innerHTML='<div class="modal-note"><b>Ficha completa del operario</b><br>Estos datos también estarán disponibles en Vista de Operarios y en los informes gerenciales.</div><div class="form-grid"><div class="field"><label>Obra</label><select id="n_work">'+masterWorksForUser().map(w=>'<option value="'+esc(w+'|'+w)+'">'+esc(w)+'</option>').join('')+'</select></div><div class="field"><label>Legajo *</label><input id="n_identifier" class="input"></div><div class="field full"><label>Apellido y nombre *</label><input id="n_name" class="input"></div><div class="field"><label>DNI *</label><input id="n_documento" class="input"></div><div class="field"><label>CUIL *</label><input id="n_cuil" class="input"></div><div class="field"><label>Categoría</label><input id="n_categoria" class="input"></div><div class="field"><label>Fecha de ingreso</label><input id="n_fecha_ingreso" type="date" class="input"></div><div class="field"><label>Fecha de nacimiento</label><input id="n_nacimiento" type="date" class="input"></div><div class="field"><label>Nacionalidad</label><input id="n_nacionalidad" class="input" value="ARG"></div><div class="field"><label>Estado civil</label><select id="n_estado_civil" class="input"><option value="">Seleccionar</option><option>Soltero</option><option>Casado</option><option>Divorciado</option><option>Viudo</option><option>Unión convivencial</option></select></div><div class="field"><label>Teléfonos</label><input id="n_telefonos" class="input"></div><div class="field full"><label>Domicilio</label><input id="n_domicilio" class="input"></div><div class="field"><label>Ciudad</label><input id="n_ciudad" class="input"></div><div class="field"><label>Código postal</label><input id="n_cp" class="input"></div><div class="field"><label>Riesgo / tarea de trabajo</label><input id="n_riesgo" class="input"></div><div class="field"><label>Vencimiento examen médico</label><input id="n_venc_examen" type="date" class="input"></div><div class="field full"><label>Empresa</label><input id="n_company" class="input" value="A.L. Servicios Integrales S.A."></div><div class="field full"><label>Observaciones</label><textarea id="n_obs" class="input"></textarea></div></div><button id="createBtn" class="btn primary">Guardar legajo</button>';
+  $('createBtn').addEventListener('click',()=>createRecord('personas'));$('modal').classList.remove('hidden');
+};
+createRecord=async function(bucket){
+  if(bucket!=='personas')return __createRecordOriginal(bucket);
+  if(blockWrite())return;if(isReadOnly())return alert('Usuario solo lectura: no puede crear registros.');
+  const [plant,work]=$('n_work').value.split('|'),identifier=$('n_identifier').value.trim(),name=$('n_name').value.trim(),documento=$('n_documento').value.trim(),cuil=$('n_cuil').value.trim(),company=$('n_company').value.trim();
+  if(!identifier||!name||!documento||!cuil)return alert('Completá legajo, apellido y nombre, DNI y CUIL.');
+  const duplicate=(state.records||[]).find(r=>bucketOf(r)==='personas'&&norm(String(r.identifier||'').replace(/^0+/,''))===norm(String(identifier).replace(/^0+/,''))&&norm(recordWork(r))===norm(work));if(duplicate)return alert('Ese legajo ya está cargado en la obra seleccionada.');
+  const docs={};docsFor(bucket,plant).forEach(d=>docs[d]={fecha:'',fechaCarga:'',obs:'',file:null});
+  const ingreso=$('n_fecha_ingreso').value,nacimiento=$('n_nacimiento').value,vencExamen=$('n_venc_examen').value;if(vencExamen){const reqExamen=Object.keys(docs).find(k=>norm(k).includes('EXAMEN'));if(reqExamen)docs[reqExamen].fecha=vencExamen}
+  const empleado={'Legajo':identifier,'Apellido, Nombre':name,'Domicilio':$('n_domicilio').value.trim(),'Documento':documento,'CUIL':cuil,'Categoria':$('n_categoria').value.trim(),'Ciudad':$('n_ciudad').value.trim(),'CP':$('n_cp').value.trim(),'Nacimiento':nacimiento?formatFechaAR(nacimiento):'','Telefonos':$('n_telefonos').value.trim(),'Fecha Ingreso':ingreso,'Antigüedad':antiguedadDesdeFecha(ingreso),'Estado Civil':$('n_estado_civil').value,'Nacionalidad':$('n_nacionalidad').value.trim(),'Ultima Rev.':'','Fecha Vencimiento Examen':vencExamen?formatFechaAR(vencExamen):'','Riesgo Trabajo':$('n_riesgo').value.trim(),'Mes Año Ingreso':ingreso?ingreso.slice(5,7)+'/'+ingreso.slice(0,4):''};
+  const raw={id:uid('rec'),planta:plant,obra:work,legajo:identifier,nombre:name,documento,cuil,categoria:empleado.Categoria,empresa:company,observaciones:$('n_obs').value,empleado,docs};
+  const row={id:raw.id,bucket,plant,work,identifier,display_name:name,company,docs,raw};const res=await supa.from('alsi_records').insert(row).select().single();if(res.error)return alert(res.error.message);state.records.push(res.data||row);closeModal();renderBucket(bucket);showSync('Legajo y ficha de operario creados');
+};
 function openRecord(id){
   const r=state.records.find(x=>x.id===id);
   if(!r)return;
@@ -1169,13 +1192,23 @@ function empLegajo(e){return empVal(e,'Legajo')}
 function empNombre(e){return empVal(e,'Apellido, Nombre')}
 function empLabel(e){return empLegajo(e)+' - '+empNombre(e)}
 function empNormText(e){return norm([empLegajo(e),empNombre(e),empVal(e,'Documento'),empVal(e,'CUIL')].join(' '))}
-function findEmpByLegajo(leg){const n=norm(String(leg||'').replace(/^0+/,'')); return EMPLEADOS_MAESTROS.find(e=>norm(empLegajo(e).replace(/^0+/,''))===n)}
-function findEmpFromText(txt){const raw=String(txt||''); const leg=raw.split('-')[0].trim(); return findEmpByLegajo(leg)||EMPLEADOS_MAESTROS.find(e=>empNormText(e).includes(norm(raw)))}
-function searchEmps(q,limit=12){const nq=norm(q); if(!nq)return []; return EMPLEADOS_MAESTROS.filter(e=>empNormText(e).includes(nq)).slice(0,limit)}
+function empFromRecord(r){
+  const raw=r.raw||{},e=raw.empleado||{};
+  if(!['personas','monotributistas'].includes(bucketOf(r)))return null;
+  return Object.assign({'Legajo':r.identifier||raw.legajo||'','Apellido, Nombre':r.display_name||raw.nombre||'','Domicilio':raw.domicilio||'','Documento':raw.documento||raw.dni||'','CUIL':raw.cuil||'','Categoria':raw.categoria||'','Ciudad':raw.ciudad||'','CP':raw.cp||'','Nacimiento':raw.nacimiento||'','Telefonos':raw.telefonos||'','Fecha Ingreso':raw.fechaIngreso||'','Antigüedad':'','Estado Civil':raw.estadoCivil||'','Nacionalidad':raw.nacionalidad||'','Ultima Rev.':'','Fecha Vencimiento Examen':raw.fechaVencimientoExamen||'','Riesgo Trabajo':raw.riesgoTrabajo||'','Mes Año Ingreso':''},e);
+}
+function empleadosDisponibles(){
+  const map={};EMPLEADOS_MAESTROS.forEach(e=>{const k=norm(empLegajo(e).replace(/^0+/,''));if(k)map[k]=e});
+  (state.records||[]).forEach(r=>{const e=empFromRecord(r);if(!e)return;const k=norm(empLegajo(e).replace(/^0+/,''));if(k&&!map[k])map[k]=e});
+  return Object.values(map);
+}
+function findEmpByLegajo(leg){const n=norm(String(leg||'').replace(/^0+/,'')); return empleadosDisponibles().find(e=>norm(empLegajo(e).replace(/^0+/,''))===n)}
+function findEmpFromText(txt){const raw=String(txt||''); const leg=raw.split('-')[0].trim(); return findEmpByLegajo(leg)||empleadosDisponibles().find(e=>empNormText(e).includes(norm(raw)))}
+function searchEmps(q,limit=12){const nq=norm(q); if(!nq)return []; return empleadosDisponibles().filter(e=>empNormText(e).includes(nq)).slice(0,limit)}
 function recordsByEmp(emp){const leg=norm(empLegajo(emp).replace(/^0+/,'')); const nom=norm(empNombre(emp)); return (state.records||[]).filter(r=>{const rleg=norm(String(legajoOf(r)||r.identifier||'').replace(/^0+/,'')); const rnom=norm(r.display_name||((r.raw||{}).nombre)||''); return (leg&&rleg===leg)||(nom&&rnom===nom)})}
 function renderOperarios(){
   $('pageTitle').textContent='Vista operarios'; $('pageSub').textContent='Base maestra desde Excel + movimientos del sistema';
-  $('view').innerHTML='<div class="panel"><div class="panel-head"><div><h3>👤 Buscar operario</h3><p class="muted" style="margin:4px 0 0">Buscá por legajo, nombre, DNI o CUIL. Base cargada: '+EMPLEADOS_MAESTROS.length+' empleados activos.</p></div></div><div style="padding:16px"><div class="emp-search-wrap"><input id="empFinder" class="input" placeholder="Ej: 1048, MARIN, DNI o CUIL..." autocomplete="off"><div id="empResults" class="emp-result-list hidden"></div></div><div id="empDetail" style="margin-top:16px"><div class="empty">Ingresá un legajo o nombre para ver el detalle.</div></div></div></div>';
+  $('view').innerHTML='<div class="panel"><div class="panel-head"><div><h3>👤 Buscar operario</h3><p class="muted" style="margin:4px 0 0">Buscá por legajo, nombre, DNI o CUIL. Base disponible: '+empleadosDisponibles().length+' empleados.</p></div></div><div style="padding:16px"><div class="emp-search-wrap"><input id="empFinder" class="input" placeholder="Ej: 1048, MARIN, DNI o CUIL..." autocomplete="off"><div id="empResults" class="emp-result-list hidden"></div></div><div id="empDetail" style="margin-top:16px"><div class="empty">Ingresá un legajo o nombre para ver el detalle.</div></div></div></div>';
   const input=$('empFinder'), list=$('empResults');
   input.addEventListener('input',()=>{const res=searchEmps(input.value,15); list.classList.toggle('hidden',!res.length); list.innerHTML=res.map(e=>'<div class="emp-result-item" data-emp-leg="'+esc(empLegajo(e))+'"><b>'+esc(empLabel(e))+'</b><br><span class="muted">DNI '+esc(empVal(e,'Documento'))+' · CUIL '+esc(empVal(e,'CUIL'))+' · '+esc(empVal(e,'Categoria'))+'</span></div>').join('')});
   list.addEventListener('click',ev=>{const item=ev.target.closest('[data-emp-leg]'); if(!item)return; const emp=findEmpByLegajo(item.dataset.empLeg); input.value=empLabel(emp); list.classList.add('hidden'); drawEmpDetail(emp)});
@@ -1338,6 +1371,67 @@ async function eliminarSeguimientoBaja(id,idx){if(blockWrite())return;if(!confir
 function addSeguimientoBaja(id){if(blockWrite())return;const b=state.records.find(x=>x.id===id); if(!b)return; const ult=ultimoDatoSeguimiento(id), correoDefault=ult.correo||'Andreani', numeroDefault=ult.numero||''; $('modalTitle').textContent='Agregar seguimiento · '+(b.identifier||''); $('modalBody').innerHTML='<div class="modal-note"><b>Seguimiento postal</b><br>Si ya había un seguimiento cargado, se completa automáticamente el mismo correo y N° de seguimiento para no repetir datos.</div><div class="form-grid"><div class="field"><label>Fecha</label><input id="sgFecha" type="date" class="input" value="'+todayStr()+'"></div><div class="field"><label>Tipo</label><select id="sgTipo" class="input"><option>Telegrama de intimación</option><option>Carta documento</option><option>Respuesta empleado</option><option>Otro</option></select></div><div class="field"><label>Correo</label><select id="sgCorreo" class="input"><option '+(correoDefault==='Andreani'?'selected':'')+'>Andreani</option><option '+(correoDefault==='Correo Argentino'?'selected':'')+'>Correo Argentino</option><option '+(correoDefault==='OCA'?'selected':'')+'>OCA</option><option '+(correoDefault==='Otro'?'selected':'')+'>Otro</option></select></div><div class="field"><label>N° seguimiento</label><input id="sgNumero" class="input" value="'+esc(numeroDefault)+'" placeholder="Ej: 30215487965"></div><div class="field"><label>Fecha límite / recordar</label><input id="sgLimite" type="date" class="input"></div><div class="field"><label>Estado</label><select id="sgEstado" class="input">'+seguimientoEstadosOptions('Ingresado')+'</select></div><div class="field full"><label>Motivo / próxima acción</label><input id="sgMotivo" class="input" placeholder="Ej: esperar respuesta, enviar intimación, revisar documentación"></div><div class="field full"><label>Observaciones</label><textarea id="sgObs" class="input"></textarea></div></div><button class="btn primary" id="sgSave">Guardar seguimiento</button> <button class="btn" id="sgBack">Volver</button>'; $('sgSave').addEventListener('click',()=>saveSeguimientoBaja(id)); $('sgBack').addEventListener('click',()=>openBajaExpediente(id));}
 async function saveSeguimientoBaja(id){if(blockWrite())return;const b=state.records.find(x=>x.id===id); if(!b)return; const raw=Object.assign({},b.raw||{}); raw.seguimientos=[...(raw.seguimientos||[]),{fecha:$('sgFecha').value,tipo:$('sgTipo').value,correo:$('sgCorreo').value,numeroSeguimiento:$('sgNumero').value.trim(),fechaLimite:$('sgLimite').value,estado:$('sgEstado').value,motivo:$('sgMotivo').value,observaciones:$('sgObs').value,creado:new Date().toISOString(),usuario:state.user&&state.user.name||''}]; const res=await supa.from('alsi_records').update({raw}).eq('id',id).select().single(); if(res.error)return alert(res.error.message); Object.assign(b,res.data||{raw}); openBajaExpediente(id); showSync('Seguimiento agregado');}
 
+/* Expedientes de telegramas: intimaciones y despidos */
+const TELEGRAMA_ESTADOS_POSTALES=['Ingresado','En camino','Entregado','No entregado'];
+const TELEGRAMA_ESTADOS_DESPIDO=['Falta recibo','Falta nota','Falta todo','Todo OK','Firmó todo'];
+function telegramaTipo(t){const r=t.raw||{};return String(r.tipoTelegrama||r.tipo||'Intimación').toLowerCase().includes('desp')?'despido':'intimacion'}
+function telegramaTipoLabel(t){return telegramaTipo(t)==='despido'?'Telegrama de despido':'Telegrama de intimación'}
+function telegramaSeguimientos(t){return Array.isArray((t.raw||{}).seguimientos)?(t.raw||{}).seguimientos:[]}
+function telegramaUltimoEstadoPostal(t){const a=telegramaSeguimientos(t);return a.length?String((a[a.length-1]||{}).estado||'Ingresado'):'Sin seguimiento'}
+function telegramaCerrado(t){
+  const tipo=telegramaTipo(t),postal=telegramaUltimoEstadoPostal(t),laboral=String((t.raw||{}).estadoLaboral||(t.raw||{}).estado||'');
+  return tipo==='intimacion'?postal==='Entregado':laboral==='Firmó todo'&&['Entregado','No entregado'].includes(postal);
+}
+function telegramaEstadoActualHtml(t){
+  const tipo=telegramaTipo(t),postal=telegramaUltimoEstadoPostal(t),laboral=String((t.raw||{}).estadoLaboral||(t.raw||{}).estado||'Pendiente');
+  if(telegramaCerrado(t))return '<span class="tag green">Cerrado</span>';
+  if(tipo==='despido')return '<span class="tag yellow">Abierto · '+esc(laboral)+' · '+esc(postal)+'</span>';
+  return '<span class="tag yellow">Abierto · '+esc(postal)+'</span>';
+}
+function telegramasVisibles(){return (state.records||[]).filter(r=>bucketOf(r)==='telegramas'&&(typeof canSee!=='function'||canSee(r))).sort((a,b)=>String((b.raw||{}).fechaEnvio||(b.raw||{}).fecha||b.created_at||'').localeCompare(String((a.raw||{}).fechaEnvio||(a.raw||{}).fecha||a.created_at||'')))}
+renderTelegramas=function(){
+  $('pageTitle').textContent='Telegramas';$('pageSub').textContent='Expedientes, seguimiento postal y cierre de ciclos';
+  const rows=telegramasVisibles(),abiertos=rows.filter(x=>!telegramaCerrado(x)).length,cerrados=rows.length-abiertos,intimaciones=rows.filter(x=>telegramaTipo(x)==='intimacion').length,despidos=rows.length-intimaciones;
+  $('view').innerHTML='<div class="final-grid"><div class="final-card" data-tel-status="abierto"><div class="label">Abiertos</div><div class="num">'+abiertos+'</div></div><div class="final-card" data-tel-status="cerrado"><div class="label">Cerrados</div><div class="num">'+cerrados+'</div></div><div class="final-card" data-tel-type="intimacion"><div class="label">Intimaciones</div><div class="num">'+intimaciones+'</div></div><div class="final-card" data-tel-type="despido"><div class="label">Despidos</div><div class="num">'+despidos+'</div></div></div><div class="panel"><div class="panel-head"><div><h3>Expedientes de telegramas</h3><p class="muted" style="margin:4px 0 0">El estado actual combina el trámite laboral y el seguimiento postal.</p></div><div class="toolbar"><select id="telTipo" class="input"><option value="">Todos los tipos</option><option value="intimacion">Intimación</option><option value="despido">Despido</option></select><select id="telCierre" class="input"><option value="">Abiertos y cerrados</option><option value="abierto">Abiertos</option><option value="cerrado">Cerrados</option></select><input id="telQ" class="input" style="width:220px" placeholder="Buscar legajo, nombre o N°"><button class="btn primary" id="telNew">➕ Nuevo</button></div></div><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Destinatario</th><th>N° telegrama</th><th>Fecha envío</th><th>Estado actual</th><th>Acción</th></tr></thead><tbody id="telRows"></tbody></table></div></div>';
+  $('telTipo').addEventListener('change',drawTelegramas);$('telCierre').addEventListener('change',drawTelegramas);$('telQ').addEventListener('input',drawTelegramas);$('telNew').addEventListener('click',newTelegrama);
+  document.querySelectorAll('[data-tel-status]').forEach(x=>x.addEventListener('click',()=>{$('telCierre').value=x.dataset.telStatus;drawTelegramas()}));document.querySelectorAll('[data-tel-type]').forEach(x=>x.addEventListener('click',()=>{$('telTipo').value=x.dataset.telType;drawTelegramas()}));drawTelegramas();
+};
+drawTelegramas=function(){
+  let rows=telegramasVisibles(),tipo=$('telTipo')?.value||'',cierre=$('telCierre')?.value||'',q=norm($('telQ')?.value||'');
+  if(tipo)rows=rows.filter(x=>telegramaTipo(x)===tipo);if(cierre)rows=rows.filter(x=>(telegramaCerrado(x)?'cerrado':'abierto')===cierre);if(q)rows=rows.filter(x=>norm([x.identifier,x.display_name,(x.raw||{}).numeroTelegrama,(x.raw||{}).documento,JSON.stringify(x.raw||{})].join(' ')).includes(q));
+  $('telRows').innerHTML=rows.map(t=>{const r=t.raw||{};return '<tr><td><span class="tag gray">'+esc(telegramaTipoLabel(t))+'</span></td><td><b>'+esc(t.identifier||r.legajo||'-')+' · '+esc(t.display_name||r.destinatario||r.nombre||'')+'</b><br><span class="muted">'+esc(recordWork(t)||'General')+'</span></td><td><b>'+esc(r.numeroTelegrama||'-')+'</b></td><td>'+esc(formatFechaAR(r.fechaEnvio||r.fecha)||'-')+'</td><td>'+telegramaEstadoActualHtml(t)+'</td><td><button class="btn primary" data-open-telegrama="'+esc(t.id)+'">Abrir expediente</button></td></tr>'}).join('')||'<tr><td colspan="6" class="empty">No hay telegramas para los filtros seleccionados.</td></tr>';
+  document.querySelectorAll('[data-open-telegrama]').forEach(b=>b.addEventListener('click',()=>openTelegramaExpediente(b.dataset.openTelegrama)));
+};
+function telegramaEmpleadoOptions(){return (typeof empleadosDisponibles==='function'?empleadosDisponibles():EMPLEADOS_MAESTROS).map(e=>'<option value="'+esc(empLabel(e))+'"></option>').join('')}
+newTelegrama=function(){
+  if(blockWrite())return;
+  $('modalTitle').textContent='Nuevo telegrama';$('modalBody').innerHTML='<div class="form-grid"><div class="field"><label>Tipo de telegrama</label><select id="ntTipo" class="input"><option value="intimacion">Telegrama de intimación</option><option value="despido">Telegrama de despido</option></select></div><div class="field full"><label>Buscar destinatario por legajo, nombre, DNI o CUIL</label><input id="ntBuscar" class="input" list="ntEmpleados" placeholder="Seleccionar de la base o cargar manualmente"><datalist id="ntEmpleados">'+telegramaEmpleadoOptions()+'</datalist></div><div class="field"><label>Legajo</label><input id="ntLegajo" class="input"></div><div class="field"><label>Destinatario</label><input id="ntDestinatario" class="input"></div><div class="field"><label>DNI</label><input id="ntDocumento" class="input"></div><div class="field"><label>CUIL</label><input id="ntCuil" class="input"></div><div class="field"><label>N° de telegrama</label><input id="ntNumero" class="input"></div><div class="field"><label>Fecha de envío</label><input id="ntFechaEnvio" type="date" class="input" value="'+todayStr()+'"></div><div id="ntDespidoFields" class="field full hidden"><div class="form-grid"><div class="field"><label>Fecha de baja</label><input id="ntFechaBaja" type="date" class="input" value="'+todayStr()+'"></div><div class="field"><label>Gremio</label><select id="ntGremio" class="input"><option value="">Seleccionar</option><option>UOCRA</option><option>UECARA</option><option>Fuera de convenio</option></select></div><div class="field"><label>Estado laboral</label><select id="ntEstadoLaboral" class="input">'+TELEGRAMA_ESTADOS_DESPIDO.map(x=>'<option>'+esc(x)+'</option>').join('')+'</select></div></div></div><div class="field full"><label>Observaciones</label><textarea id="ntObs" class="input"></textarea></div></div><div style="display:flex;gap:10px"><button class="btn primary" id="ntGuardar">Guardar</button><button class="btn" id="ntCerrar">Cerrar</button></div>';
+  const toggle=()=>document.getElementById('ntDespidoFields').classList.toggle('hidden',$('ntTipo').value!=='despido');$('ntTipo').addEventListener('change',toggle);toggle();
+  $('ntBuscar').addEventListener('change',()=>{const emp=findEmpFromText($('ntBuscar').value);if(!emp)return;$('ntLegajo').value=empLegajo(emp);$('ntDestinatario').value=empNombre(emp);$('ntDocumento').value=empVal(emp,'Documento');$('ntCuil').value=empVal(emp,'CUIL')});
+  $('ntGuardar').addEventListener('click',saveNuevoTelegrama);$('ntCerrar').addEventListener('click',closeModal);$('modal').classList.remove('hidden');
+};
+async function saveNuevoTelegrama(){
+  if(blockWrite())return;const tipo=$('ntTipo').value,legajo=$('ntLegajo').value.trim(),destinatario=$('ntDestinatario').value.trim(),numero=$('ntNumero').value.trim();if(!destinatario)return alert('Completá el destinatario.');if(!numero)return alert('Completá el N° de telegrama.');
+  const rec=(state.records||[]).find(r=>['personas','monotributistas'].includes(bucketOf(r))&&norm(String(r.identifier||'').replace(/^0+/,''))===norm(String(legajo).replace(/^0+/,''))),now=new Date().toISOString();
+  const raw={id:uid('telegrama'),tipoTelegrama:tipo,tipo:tipo==='despido'?'Telegrama de despido':'Telegrama de intimación',legajo,destinatario,nombre:destinatario,documento:$('ntDocumento').value.trim(),cuil:$('ntCuil').value.trim(),numeroTelegrama:numero,fechaEnvio:$('ntFechaEnvio').value,fecha:$('ntFechaEnvio').value,fechaBaja:tipo==='despido'?$('ntFechaBaja').value:'',gremio:tipo==='despido'?$('ntGremio').value:'',estadoLaboral:tipo==='despido'?$('ntEstadoLaboral').value:'',observaciones:$('ntObs').value,seguimientos:[],estadoCiclo:'Abierto',creado:now,usuario:state.user&&state.user.name||'',historial:[{fecha:now,accion:'telegrama_creado',usuario:state.user&&state.user.name||''}]};
+  const row={id:raw.id,bucket:'telegramas',plant:rec?.plant||'GENERAL',work:rec?recordWork(rec):'GENERAL',identifier:legajo,display_name:destinatario,company:rec?.company||'A.L. Servicios Integrales S.A.',docs:{},raw};
+  const res=await supa.from('alsi_records').insert(row).select().single();if(res.error)return alert(res.error.message);state.records.push(res.data||row);closeModal();renderTelegramas();showSync('Telegrama guardado');
+}
+function openTelegramaExpediente(id){
+  const t=state.records.find(x=>x.id===id);if(!t)return;const r=t.raw||{},seg=telegramaSeguimientos(t),tipo=telegramaTipo(t),cerrado=telegramaCerrado(t);
+  const seguimientoRows=seg.map((s,i)=>'<tr><td>'+esc(formatFechaAR(s.fecha)||'-')+'</td><td>'+esc(s.correo||'-')+'</td><td><b>'+esc(s.numeroSeguimiento||'-')+'</b></td><td><select class="input tel-seg-estado" data-tel-seg-idx="'+i+'">'+TELEGRAMA_ESTADOS_POSTALES.map(e=>'<option '+(e===s.estado?'selected':'')+'>'+esc(e)+'</option>').join('')+'</select></td><td>'+esc(s.observaciones||'')+'</td><td><button class="btn" data-save-tel-seg="'+i+'">Guardar estado</button> <button class="icon-btn delete" data-del-tel-seg="'+i+'">🗑️</button></td></tr>').join('');
+  $('modalTitle').textContent='Telegrama · '+(r.numeroTelegrama||t.identifier||'');$('modalBody').innerHTML='<div class="soft-card"><div class="emp-detail-title"><div><h3 style="margin:0">'+esc(telegramaTipoLabel(t))+'</h3><p class="muted" style="margin:5px 0 0">Expediente y seguimiento postal</p></div>'+telegramaEstadoActualHtml(t)+'</div><div class="emp-grid" style="margin-top:14px"><div class="emp-data"><label>Destinatario</label><b>'+esc(r.destinatario||r.nombre||t.display_name||'-')+'</b></div><div class="emp-data"><label>Legajo</label><b>'+esc(r.legajo||t.identifier||'-')+'</b></div><div class="emp-data"><label>DNI / CUIL</label><b>'+esc([r.documento,r.cuil].filter(Boolean).join(' · ')||'-')+'</b></div><div class="emp-data"><label>N° telegrama</label><b>'+esc(r.numeroTelegrama||'-')+'</b></div><div class="emp-data"><label>Fecha envío</label><b>'+esc(formatFechaAR(r.fechaEnvio||r.fecha)||'-')+'</b></div><div class="emp-data"><label>Estado actual</label><b>'+(cerrado?'Cerrado':'Abierto')+' · '+esc(telegramaUltimoEstadoPostal(t))+'</b></div></div><div class="field full" style="margin-top:12px"><label>Observaciones</label><div>'+esc(r.observaciones||'-')+'</div></div></div>'+(tipo==='despido'?'<div class="panel" style="margin-top:14px"><div class="panel-head"><h3>Estado del despido</h3></div><div class="modal-body"><div class="form-grid"><div class="field"><label>Fecha de baja</label><input id="teFechaBaja" type="date" class="input" value="'+esc(r.fechaBaja||'')+'"></div><div class="field"><label>Gremio</label><select id="teGremio" class="input"><option value="">Seleccionar</option>'+['UOCRA','UECARA','Fuera de convenio'].map(x=>'<option '+(x===r.gremio?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div><div class="field"><label>Estado laboral</label><select id="teEstadoLaboral" class="input">'+TELEGRAMA_ESTADOS_DESPIDO.map(x=>'<option '+(x===(r.estadoLaboral||r.estado)?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div></div><button class="btn primary" id="teGuardarLaboral">Guardar estado laboral</button><p class="muted">El expediente se cierra cuando el estado laboral es “Firmó todo” y el seguimiento postal está “Entregado” o “No entregado”.</p></div></div>':'<div class="modal-note" style="margin-top:14px">La intimación se cierra automáticamente cuando el seguimiento postal cambia a “Entregado”.</div>')+'<div class="panel" style="margin-top:14px"><div class="panel-head"><div><h3>Seguimiento postal</h3><p class="muted" style="margin:4px 0 0">Sin fecha límite ni control de revisado.</p></div><button class="btn primary" id="teAddSeg">Agregar seguimiento</button></div><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Correo</th><th>N° seguimiento</th><th>Estado</th><th>Observaciones</th><th>Acción</th></tr></thead><tbody>'+(seguimientoRows||'<tr><td colspan="6" class="empty">Sin seguimientos cargados.</td></tr>')+'</tbody></table></div></div>';
+  $('modal').classList.remove('hidden');$('teAddSeg').addEventListener('click',()=>addTelegramaSeguimiento(id));if($('teGuardarLaboral'))$('teGuardarLaboral').addEventListener('click',()=>saveTelegramaEstadoLaboral(id));document.querySelectorAll('[data-save-tel-seg]').forEach(b=>b.addEventListener('click',()=>saveTelegramaSeguimientoEstado(id,Number(b.dataset.saveTelSeg))));document.querySelectorAll('[data-del-tel-seg]').forEach(b=>b.addEventListener('click',()=>deleteTelegramaSeguimiento(id,Number(b.dataset.delTelSeg))));
+}
+function addTelegramaSeguimiento(id){
+  const t=state.records.find(x=>x.id===id);if(!t)return;const last=telegramaSeguimientos(t).slice(-1)[0]||{};$('modalTitle').textContent='Agregar seguimiento · '+((t.raw||{}).numeroTelegrama||'');$('modalBody').innerHTML='<div class="form-grid"><div class="field"><label>Fecha</label><input id="tsFecha" type="date" class="input" value="'+todayStr()+'"></div><div class="field"><label>Correo</label><select id="tsCorreo" class="input">'+['Andreani','Correo Argentino','OCA','Otro'].map(x=>'<option '+(x===last.correo?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></div><div class="field"><label>N° de seguimiento</label><input id="tsNumero" class="input" value="'+esc(last.numeroSeguimiento||'')+'"></div><div class="field"><label>Estado</label><select id="tsEstado" class="input">'+TELEGRAMA_ESTADOS_POSTALES.map(x=>'<option>'+esc(x)+'</option>').join('')+'</select></div><div class="field full"><label>Observaciones</label><textarea id="tsObs" class="input"></textarea></div></div><button class="btn primary" id="tsGuardar">Guardar seguimiento</button> <button class="btn" id="tsVolver">Volver</button>';$('tsGuardar').addEventListener('click',()=>saveTelegramaSeguimiento(id));$('tsVolver').addEventListener('click',()=>openTelegramaExpediente(id));
+}
+async function updateTelegramaRaw(t,raw,message){raw.estadoCiclo=telegramaCerrado(Object.assign({},t,{raw}))?'Cerrado':'Abierto';const res=await supa.from('alsi_records').update({raw}).eq('id',t.id).select().single();if(res.error)return alert(res.error.message);Object.assign(t,res.data||{raw});renderTelegramas();openTelegramaExpediente(t.id);showSync(message)}
+async function saveTelegramaSeguimiento(id){if(blockWrite())return;const t=state.records.find(x=>x.id===id);if(!t)return;const raw=Object.assign({},t.raw||{});raw.seguimientos=[...(raw.seguimientos||[]),{fecha:$('tsFecha').value,correo:$('tsCorreo').value,numeroSeguimiento:$('tsNumero').value.trim(),estado:$('tsEstado').value,observaciones:$('tsObs').value,creado:new Date().toISOString(),usuario:state.user&&state.user.name||''}];await updateTelegramaRaw(t,raw,'Seguimiento guardado')}
+async function saveTelegramaSeguimientoEstado(id,idx){if(blockWrite())return;const t=state.records.find(x=>x.id===id);if(!t)return;const raw=Object.assign({},t.raw||{});raw.seguimientos=[...(raw.seguimientos||[])];raw.seguimientos[idx]=Object.assign({},raw.seguimientos[idx]||{},{estado:document.querySelector('[data-tel-seg-idx="'+idx+'"]').value,actualizado:new Date().toISOString(),usuario:state.user&&state.user.name||''});await updateTelegramaRaw(t,raw,'Estado postal actualizado')}
+async function saveTelegramaEstadoLaboral(id){if(blockWrite())return;const t=state.records.find(x=>x.id===id);if(!t)return;const raw=Object.assign({},t.raw||{},{fechaBaja:$('teFechaBaja').value,gremio:$('teGremio').value,estadoLaboral:$('teEstadoLaboral').value});await updateTelegramaRaw(t,raw,'Estado laboral actualizado')}
+async function deleteTelegramaSeguimiento(id,idx){if(blockWrite())return;if(!confirm('¿Eliminar este seguimiento?'))return;const t=state.records.find(x=>x.id===id);if(!t)return;const raw=Object.assign({},t.raw||{});raw.seguimientos=[...(raw.seguimientos||[])];raw.seguimientos.splice(idx,1);await updateTelegramaRaw(t,raw,'Seguimiento eliminado')}
+
 
 const __alsiRenderOriginal = render;
 render = function(){
@@ -1363,13 +1457,15 @@ function informeRegistroRows(){
   const buckets=['personas','empresas','vehiculos'];
   const rows=[];
   buckets.forEach(bucket=>visibleRecords(bucket).forEach(r=>{
+    const emp=bucket==='personas'?findEmpByLegajo(r.identifier||((r.raw||{}).legajo)||''):null;
     rows.push({
       bucket,
       categoria:informeBucketLabel(bucket),
       condicion:informeCondicionRegistro(r),
       ident:r.identifier||((r.raw||{}).legajo)||'',
       nombre:r.display_name||((r.raw||{}).nombre)||r.company||'',
-      obra:recordWork(r)||r.work||r.plant||((r.raw||{}).obra)||''
+      obra:recordWork(r)||r.work||r.plant||((r.raw||{}).obra)||'',requisitos:Object.keys(r.docs||{}),
+      dni:empVal(emp,'Documento'),cuil:empVal(emp,'CUIL'),categoriaLaboral:empVal(emp,'Categoria'),domicilio:empVal(emp,'Domicilio'),ciudad:empVal(emp,'Ciudad'),cp:empVal(emp,'CP'),nacimiento:empVal(emp,'Nacimiento'),telefonos:empVal(emp,'Telefonos'),fechaIngreso:empVal(emp,'Fecha Ingreso'),antiguedad:empVal(emp,'Antigüedad'),estadoCivil:empVal(emp,'Estado Civil'),nacionalidad:empVal(emp,'Nacionalidad'),riesgoTrabajo:empVal(emp,'Riesgo Trabajo'),vencimientoExamen:empVal(emp,'Fecha Vencimiento Examen')
     });
   }));
   return rows.sort((a,b)=>{
@@ -1380,20 +1476,21 @@ function informeRegistroRows(){
 function informeDocumentoRows(){
   const rows=[];
   ['personas','empresas','vehiculos'].forEach(bucket=>visibleRecords(bucket).forEach(r=>{
-    const condicion=informeCondicionRegistro(r), ident=r.identifier||((r.raw||{}).legajo)||'', nombre=r.display_name||((r.raw||{}).nombre)||r.company||'', obra=recordWork(r)||r.work||r.plant||((r.raw||{}).obra)||'';
+    const condicion=informeCondicionRegistro(r), ident=r.identifier||((r.raw||{}).legajo)||'', nombre=r.display_name||((r.raw||{}).nombre)||r.company||'', obra=recordWork(r)||r.work||r.plant||((r.raw||{}).obra)||'',emp=bucket==='personas'?findEmpByLegajo(ident):null;
     Object.entries(r.docs||{}).forEach(([req,v])=>{
       const vencimiento=docFecha(v), carga=docLoadDate(v), dias=diffDays(vencimiento), sinAuditar=/^\d{4}-\d{2}-\d{2}$/.test(String(carga||''));
       let estado='Sin fecha';
       if(dias!==null)estado=dias<0?'Vencido':dias===0?'Vence hoy':dias<=30?'Próximo':'Vigente';
-      rows.push({bucket,categoria:informeBucketLabel(bucket),condicion,ident,nombre,obra,documento:req,vencimiento,carga,dias,sinAuditar,estado});
+      rows.push({bucket,categoria:informeBucketLabel(bucket),condicion,ident,nombre,obra,dni:empVal(emp,'Documento'),cuil:empVal(emp,'CUIL'),categoriaLaboral:empVal(emp,'Categoria'),documento:req,vencimiento,carga,dias,sinAuditar,estado});
     });
   }));
   return rows;
 }
 function informeFiltrosBase(rows){
-  const bucket=$('infBucket')?.value||'', condicion=$('infCondicion')?.value||'', q=norm($('infQ')?.value||'');
+  const bucket=$('infBucket')?.value||'', condicion=$('infCondicion')?.value||'', requisito=$('infRequisito')?.value||'', q=norm($('infQ')?.value||'');
   if(bucket)rows=rows.filter(x=>x.bucket===bucket);
   if(condicion)rows=rows.filter(x=>x.condicion===condicion);
+  if(requisito)rows=rows.filter(x=>norm(x.documento||'')===norm(requisito)||(x.requisitos||[]).some(r=>norm(r)===norm(requisito)));
   if(q)rows=rows.filter(x=>norm([x.condicion,x.categoria,x.ident,x.nombre,x.obra,x.documento,x.estado].join(' ')).includes(q));
   return rows;
 }
@@ -1439,7 +1536,10 @@ function renderInformes(){
     '<div class="report-mini-counts"><span>Documentos: <b>'+st.documentos+'</b></span><span>Sin auditar: <b style="color:var(--yellow)">'+st.sinAuditar+'</b></span><span>Vencidos: <b style="color:var(--red)">'+st.vencidos+'</b></span><span>Próximos 30 días: <b>'+st.proximos30+'</b></span></div>'+
     '<h3 class="report-section-title" id="infDetalleTitulo">DETALLE</h3><p class="med-report-sub" id="infDetalleNota"></p><div class="table-wrap"><table class="report-table"><thead id="infHead"></thead><tbody id="infRows"></tbody></table></div>'+
     '<div class="report-reference"><b>REFERENCIA</b><br><span class="ref-ok">● HABILITADO:</span> Sin documentación vencida. <span class="ref-bad">● INHABILITADO:</span> Posee al menos un documento vencido.</div><div class="report-footer">Generado automáticamente por Control de Vencimientos - AL Servicios Integrales S.A.</div></section>';
-  ['infModo','infHorizonte','infBucket','infCondicion','infQ'].forEach(id=>$(id)?.addEventListener('input',drawInformes));
+  const horizonteField=$('infHorizonte').closest('.field');horizonteField.innerHTML='<label>Límite de días para próximos</label><input id="infHorizonte" class="input" type="number" min="0" max="36500" step="1" value="30" placeholder="Ej: 45"><span class="muted">Ingresá libremente la cantidad de días.</span>';
+  const requisitos=[...new Set(informeDocumentoRows().map(x=>x.documento).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true})),reqField=document.createElement('div');reqField.className='field';reqField.innerHTML='<label>Requisito de la obra seleccionada</label><select id="infRequisito" class="input"><option value="">Todos los requisitos</option>'+requisitos.map(x=>'<option>'+esc(x)+'</option>').join('')+'</select>';
+  $('infQ').closest('.field').before(reqField);
+  ['infModo','infHorizonte','infBucket','infCondicion','infRequisito','infQ'].forEach(id=>$(id)?.addEventListener('input',drawInformes));
   $('infPrint')?.addEventListener('click',()=>window.print());
   $('infExcel')?.addEventListener('click',exportInformeExcel);
   drawInformes();
@@ -1447,6 +1547,7 @@ function renderInformes(){
 function drawInformes(){
   const vista=informeVistaActual(),rows=vista.rows,modo=vista.modo;
   $('infHorizonte').disabled=modo!=='cercanos';
+  const tabla=$('infRows').closest('table');tabla.classList.toggle('report-doc',vista.tipo==='documentos');
   $('infDetalleTitulo').textContent=informeModoTitulo(modo).toUpperCase()+' · '+rows.length;
   $('infDetalleNota').textContent=modo==='cercanos'?'Ordenado por el vencimiento futuro más próximo dentro del horizonte seleccionado.':modo==='sin_auditar'?'Coincide con los documentos que muestran el triángulo de revisión.':'Vista actual según los filtros seleccionados.';
   if(vista.tipo==='registros'){
@@ -1457,8 +1558,8 @@ function drawInformes(){
     $('infRows').innerHTML=rows.slice(0,1200).map(x=>'<tr><td><span class="tag '+(x.dias!==null&&x.dias<0?'red':x.sinAuditar?'yellow':'green')+'">'+esc(x.sinAuditar?'⚠ Sin auditar':x.estado)+'</span></td><td>'+informeCondicionPill(x.condicion)+'</td><td>'+esc(x.categoria)+'</td><td><b>'+esc(x.ident)+'</b></td><td>'+esc(x.nombre)+'</td><td>'+esc(x.obra)+'</td><td>'+esc(x.documento)+'</td><td>'+esc(formatFechaAR(x.vencimiento)||'Sin fecha')+'</td><td>'+esc(x.dias===null?'-':x.dias<0?Math.abs(x.dias)+' vencido':x.dias+' restantes')+'</td><td>'+esc(formatFechaAR(x.carga)||'-')+'</td></tr>').join('')||'<tr><td colspan="10" class="empty">Sin documentos para el filtro seleccionado.</td></tr>';
   }
 }
-function informeExcelRegistro(x){return {'Condición':x.condicion,'Categoría':x.categoria,'Legajo / ID':x.ident,'Nombre':x.nombre,'Obra':x.obra}}
-function informeExcelDocumento(x){return {'Estado documental':x.estado,'Condición registro':x.condicion,'Categoría':x.categoria,'Legajo / ID':x.ident,'Nombre':x.nombre,'Obra':x.obra,'Documento':x.documento,'Vencimiento':formatFechaAR(x.vencimiento)||'','Días al vencimiento':x.dias===null?'':x.dias,'Fecha de carga':formatFechaAR(x.carga)||'','Auditoría':x.sinAuditar?'Sin auditar':''}}
+function informeExcelRegistro(x){return {'Condición':x.condicion,'Categoría':x.categoria,'Legajo / ID':x.ident,'Nombre':x.nombre,'Obra':x.obra,'DNI':x.dni||'','CUIL':x.cuil||'','Categoría laboral':x.categoriaLaboral||'','Domicilio':x.domicilio||'','Ciudad':x.ciudad||'','CP':x.cp||'','Nacimiento':x.nacimiento||'','Teléfonos':x.telefonos||'','Fecha de ingreso':x.fechaIngreso||'','Antigüedad':x.antiguedad||'','Estado civil':x.estadoCivil||'','Nacionalidad':x.nacionalidad||'','Riesgo de trabajo':x.riesgoTrabajo||'','Vencimiento examen':x.vencimientoExamen||''}}
+function informeExcelDocumento(x){return {'Estado documental':x.estado,'Condición registro':x.condicion,'Categoría':x.categoria,'Legajo / ID':x.ident,'Nombre':x.nombre,'DNI':x.dni||'','CUIL':x.cuil||'','Categoría laboral':x.categoriaLaboral||'','Obra':x.obra,'Documento':x.documento,'Vencimiento':formatFechaAR(x.vencimiento)||'','Días al vencimiento':x.dias===null?'':x.dias,'Fecha de carga':formatFechaAR(x.carga)||'','Auditoría':x.sinAuditar?'Sin auditar':''}}
 function informeResumenObras(){
   const map={};
   informeRegistroRows().forEach(x=>{const k=x.obra||'Sin obra'; if(!map[k])map[k]={Obra:k,Registros:0,Habilitados:0,Inhabilitados:0,Documentos:0,'Sin auditar':0,Vencidos:0,'Próximos 30 días':0}; map[k].Registros++;map[k][x.condicion==='Habilitado'?'Habilitados':'Inhabilitados']++});
@@ -1469,17 +1570,23 @@ function informeSetSheet(wb,name,data,widths){
   const ws=XLSX.utils.json_to_sheet(data.length?data:[{Información:'Sin registros'}]);
   ws['!cols']=(widths||[]).map(w=>({wch:w}));
   if(ws['!ref'])ws['!autofilter']={ref:ws['!ref']};
+  ws['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+  ws['!rows']=[{hpt:24}];
   XLSX.utils.book_append_sheet(wb,ws,name.slice(0,31));
 }
+function informeExcelTelegramas(){return telegramasVisibles().map(t=>{const r=t.raw||{};return {'Tipo':telegramaTipoLabel(t),'Estado del ciclo':telegramaCerrado(t)?'Cerrado':'Abierto','Estado postal':telegramaUltimoEstadoPostal(t),'Estado laboral':r.estadoLaboral||'','Legajo':r.legajo||t.identifier||'','Destinatario':r.destinatario||r.nombre||t.display_name||'','DNI':r.documento||'','CUIL':r.cuil||'','N° telegrama':r.numeroTelegrama||'','Fecha de envío':formatFechaAR(r.fechaEnvio||r.fecha)||'','Fecha de baja':formatFechaAR(r.fechaBaja)||'','Gremio':r.gremio||'','Obra':recordWork(t)||'','Observaciones':r.observaciones||''}})}
+function informeExcelBajas(){return (state.records||[]).filter(x=>['bajas','baja'].includes(bucketOf(x))).map(b=>{const r=b.raw||{},emp=findEmpByLegajo(r.legajo||b.identifier);return {'Legajo':r.legajo||b.identifier||'','Nombre':r.nombre||b.display_name||'','DNI':r.documento||empVal(emp,'Documento'),'CUIL':empVal(emp,'CUIL'),'Fecha de baja':formatFechaAR(r.fechaBaja)||'','Gremio':r.gremio||'','Estado':r.estado||'','Movimiento':r.movimiento||'','Obra':r.ultimaObra||recordWork(b)||'','Observaciones':r.observaciones||''}})}
 function exportInformeExcel(){
   if(!window.XLSX)return alert('No se pudo cargar el generador de Excel. Revisá la conexión a internet y volvé a intentar.');
-  const registros=informeRegistroRows(),docs=informeDocumentoRows(),st=informeStatsGerenciales(),vista=informeVistaActual(),usuario=(state.user&&state.user.name)||'',obra=($('workFilter')&&$('workFilter').value)||'TODAS',ahora=new Date();
+  const registros=informeRegistroRows(),docs=informeDocumentoRows(),st=informeStatsGerenciales(),vista=informeVistaActual(),usuario=(state.user&&state.user.name)||'',obra=($('workFilter')&&$('workFilter').value)||'TODAS',requisito=$('infRequisito')?.value||'Todos',horizonte=$('infHorizonte')?.value||'30',ahora=new Date();
   const wb=XLSX.utils.book_new();
   const resumen=[
     {Indicador:'INFORME GERENCIAL DOCUMENTAL',Valor:''},
     {Indicador:'Fecha y hora',Valor:ahora.toLocaleString('es-AR')},
     {Indicador:'Usuario',Valor:usuario},
     {Indicador:'Obra seleccionada',Valor:obra},
+    {Indicador:'Requisito seleccionado',Valor:requisito},
+    {Indicador:'Límite de próximos',Valor:horizonte+' días'},
     {Indicador:'Tipo de informe visible',Valor:informeModoTitulo(vista.modo)},
     {Indicador:'Registros totales',Valor:st.registros},
     {Indicador:'Habilitados',Valor:st.habilitados},
@@ -1491,12 +1598,16 @@ function exportInformeExcel(){
   ];
   informeSetSheet(wb,'Resumen Gerencial',resumen,[34,28]);
   informeSetSheet(wb,'Resumen por Obra',informeResumenObras(),[28,12,14,16,14,14,12,20]);
-  informeSetSheet(wb,'Registros',registros.map(informeExcelRegistro),[16,15,14,34,28]);
-  informeSetSheet(wb,'Detalle Documental',docs.map(informeExcelDocumento),[18,20,14,14,32,26,28,16,18,16,16]);
-  informeSetSheet(wb,'Sin Auditar',docs.filter(x=>x.sinAuditar).map(informeExcelDocumento),[18,20,14,14,32,26,28,16,18,16,16]);
-  informeSetSheet(wb,'Vencidos',docs.filter(x=>x.dias!==null&&x.dias<0).sort((a,b)=>a.dias-b.dias).map(informeExcelDocumento),[18,20,14,14,32,26,28,16,18,16,16]);
-  informeSetSheet(wb,'Próximos 30 días',docs.filter(x=>x.dias!==null&&x.dias>=0&&x.dias<=30).sort((a,b)=>a.dias-b.dias).map(informeExcelDocumento),[18,20,14,14,32,26,28,16,18,16,16]);
-  informeSetSheet(wb,'Vista Filtrada',vista.tipo==='registros'?vista.rows.map(informeExcelRegistro):vista.rows.map(informeExcelDocumento),vista.tipo==='registros'?[16,15,14,34,28]:[18,20,14,14,32,26,28,16,18,16,16]);
+  const regWidths=[16,15,14,34,28,14,18,20,28,20,10,15,18,16,16,16,14,24,18],docWidths=[18,20,14,14,32,14,18,20,26,28,16,18,16,16];
+  informeSetSheet(wb,'Personal por Obra',registros.filter(x=>x.bucket==='personas').map(informeExcelRegistro),regWidths);
+  informeSetSheet(wb,'Todos los Registros',registros.map(informeExcelRegistro),regWidths);
+  informeSetSheet(wb,'Detalle Documental',docs.map(informeExcelDocumento),docWidths);
+  informeSetSheet(wb,'Sin Auditar',docs.filter(x=>x.sinAuditar).map(informeExcelDocumento),docWidths);
+  informeSetSheet(wb,'Vencidos',docs.filter(x=>x.dias!==null&&x.dias<0).sort((a,b)=>a.dias-b.dias).map(informeExcelDocumento),docWidths);
+  informeSetSheet(wb,'Próximos según límite',docs.filter(x=>x.dias!==null&&x.dias>=0&&x.dias<=Number(horizonte)).sort((a,b)=>a.dias-b.dias).map(informeExcelDocumento),docWidths);
+  informeSetSheet(wb,'Telegramas',informeExcelTelegramas(),[22,18,18,20,14,32,14,18,20,16,16,18,26,40]);
+  informeSetSheet(wb,'Bajas',informeExcelBajas(),[14,32,14,18,16,16,18,24,26,40]);
+  informeSetSheet(wb,'Vista Filtrada',vista.tipo==='registros'?vista.rows.map(informeExcelRegistro):vista.rows.map(informeExcelDocumento),vista.tipo==='registros'?regWidths:docWidths);
   XLSX.writeFile(wb,'informe_gerencial_documental_'+todayStr()+'.xlsx',{compression:true});
 }
 
