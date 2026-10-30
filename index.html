@@ -440,13 +440,13 @@ function normalizePortalUrl(value){let url=String(value||'').trim(); if(!url)ret
 function companyPortalUrl(r){return normalizePortalUrl(r&&r.raw&&r.raw.portalUrl)}
 function openCompanyPortal(id){if(!canAccessCompanyPortals())return alert('No tenés permiso para acceder a los portales de las fábricas.'); const r=state.records.find(x=>x.id===id),url=companyPortalUrl(r); if(!url)return alert('Esta empresa todavía no tiene un portal cargado.'); window.open(url,'_blank','noopener,noreferrer')}
 function canViewBajas(){const u=(state.user&&state.user.username||'').toLowerCase(); return ['matias','sorio','eduardo','sergio'].includes(u)}
-function blockBajas(){if(canViewBajas())return false; alert('No tenés permiso para ver la vista de Bajas.'); setView('dashboard',false); return true} function applyReadOnlyLock(){const ro=isReadOnly(); document.body.classList.toggle('readonly-mode',ro); if(!ro)return; document.querySelectorAll('button').forEach(b=>{const t=(b.textContent||'').trim().toUpperCase(); const title=(b.title||'').toUpperCase(); const oc=(b.getAttribute('onclick')||'').toUpperCase(); if(/(AGREGAR|GUARDAR|ELIMINAR|EDITAR|BORRAR|IMPORTAR|N\/A|REINCORPORAR|NUEV[OA]|ACTIVAR|INACTIVAR|ASIGNAR)/.test(t+' '+title+' '+oc)){ if(!/(VER|BUSCAR|FILTRAR|IMPRIMIR|PDF|EXCEL|CERRAR|ABRIR)/.test(t+' '+title)) b.style.display='none'; }}); } function canManageUsers(){return !!(state.user&&(state.user.superAdmin||state.user.operativeAdmin||state.user.username==='sorio'||state.user.username==='matias'))&&!isReadOnly()} function canAssignWorks(){return !!(state.user&&(state.user.superAdmin||state.user.username==='sorio'))&&!isReadOnly()} function canManageWorks(){return !!(state.user&&(state.user.superAdmin||state.user.username==='sorio'))&&!isReadOnly()}
+function blockBajas(){if(canViewBajas())return false; alert('No tenés permiso para ver la vista de Bajas.'); setView('dashboard',false); return true} function applyReadOnlyLock(){const ro=isReadOnly(); document.body.classList.toggle('readonly-mode',ro); if(!ro)return; document.querySelectorAll('button').forEach(b=>{const t=(b.textContent||'').trim().toUpperCase(); const title=(b.title||'').toUpperCase(); const oc=(b.getAttribute('onclick')||'').toUpperCase(); if(/(AGREGAR|GUARDAR|ELIMINAR|EDITAR|BORRAR|IMPORTAR|N\/A|REINCORPORAR|NUEV[OA]|ACTIVAR|INACTIVAR|ASIGNAR)/.test(t+' '+title+' '+oc)){ if(!/(VER|BUSCAR|FILTRAR|IMPRIMIR|PDF|EXCEL|CERRAR|ABRIR)/.test(t+' '+title)) b.style.display='none'; }}); } function canManageUsers(){return !!(state.user&&(state.user.superAdmin||state.user.operativeAdmin||state.user.username==='sorio'||state.user.username==='matias'))&&!isReadOnly()} function canAssignWorks(){return userHasAllWorks()&&!isReadOnly()} function canManageWorks(){return userHasAllWorks()&&!isReadOnly()}
 function canonicalWork(v){const n=norm(v); if(n.includes('ARAUCO'))return'ARAUCO'; if(n.includes('NOURYON'))return'NOURYON'; if(n.includes('SWIFT'))return'SWIFT'; if(n.includes('TSM'))return'TSM'; if(n.includes('CENTRAL PUERTO'))return'CENTRAL PUERTO'; if(n.includes('CVO')||n.includes('CV0'))return'CVO'; if(n.includes('CARGILL')||n==='PPA'||n.includes('PPA')||n.includes('P.A'))return'CARGILL VGG / PPA'; if(n.includes('LDC')||n.includes('DREYFUS'))return'LDC LAGOS / TIMBÚES'; if(n.includes('EVONIK'))return'EVONIK'; if(n.includes('ACINDAR'))return'ACINDAR'; if(n.includes('PAMPA'))return'PAMPA'; if(n.includes('BOORT'))return'BOORTMALT'; return String(v||'').trim().toUpperCase()}
 function localWorkKey(){return 'alsi_local_works_v2'} function inactiveWorkKey(){return 'alsi_inactive_works_v2'} function workResponsibleKey(){return 'alsi_work_responsibles_v1'}
 function loadLocalWorkState(){try{state.localWorks=JSON.parse(localStorage.getItem(localWorkKey())||'[]')||[]}catch(e){state.localWorks=[]} try{state.inactiveWorks=JSON.parse(localStorage.getItem(inactiveWorkKey())||'[]')||[]}catch(e){state.inactiveWorks=[]} try{state.workResponsibles=JSON.parse(localStorage.getItem(workResponsibleKey())||'{}')||{}}catch(e){state.workResponsibles={}}}
 function saveLocalWorkState(){try{localStorage.setItem(localWorkKey(),JSON.stringify(uniqueWorks(state.localWorks||[]))); localStorage.setItem(inactiveWorkKey(),JSON.stringify(uniqueWorks(state.inactiveWorks||[]))); localStorage.setItem(workResponsibleKey(),JSON.stringify(state.workResponsibles||{}))}catch(e){}}
 function uniqueWorks(arr){return [...new Set((arr||[]).map(w=>canonicalWork(w)||w).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'))}
-function dbWorkName(w){return canonicalWork(w.name||w.work||w.plant||w.obra||((w.raw||{}).name)||((w.raw||{}).obra)||'')}
+function dbWorkName(w){return canonicalWork(w.plant||w.planta||w.raw?.planta||w.name||w.work||w.obra||w.raw?.name||w.raw?.obra||'')}
 function dbWorkInactive(w){const raw=w.raw||{}; const v=String(w.status||w.estado||w.state||raw.status||raw.estado||'').toUpperCase(); return w.is_active===false||w.active===false||v.includes('INACT')||v.includes('BAJA')||v.includes('DESACT')}
 const WORK_RESPONSIBLES=['Eduardo','Sergio','Lopez'];
 const DEFAULT_WORK_RESPONSIBLES={
@@ -466,13 +466,13 @@ const DEFAULT_WORK_RESPONSIBLES={
 function canonicalResponsible(v){const n=norm(v); if(n.includes('EDUARDO'))return 'Eduardo'; if(n.includes('SERGIO'))return 'Sergio'; if(n.includes('LOPEZ')||n.includes('LÓPEZ')||n.includes('MATIAS')||n.includes('MATÍAS'))return 'Lopez'; return '';}
 function responsibleUsername(resp){resp=canonicalResponsible(resp); return resp==='Eduardo'?'eduardo':resp==='Sergio'?'sergio':resp==='Lopez'?'matias':'';}
 function responsibleNameForUser(username){username=String(username||'').toLowerCase(); return username==='eduardo'?'Eduardo':username==='sergio'?'Sergio':username==='matias'?'Lopez':'';}
-function getWorkRow(work){const cw=canonicalWork(work); return (state.works||[]).find(x=>norm(dbWorkName(x))===norm(cw));}
+function getWorkRow(work){const cw=canonicalWork(work),rows=(state.works||[]).filter(x=>norm(dbWorkName(x))===norm(cw));return rows.sort((a,b)=>{const rank=x=>(norm(canonicalWork(x.name||''))===norm(cw)?4:0)+(Object.prototype.hasOwnProperty.call(x.raw||{},'responsable')?2:0);return rank(b)-rank(a)||String(b.updated_at||'').localeCompare(String(a.updated_at||''))})[0]}
 function workDbId(work){return 'work_'+norm(work).replace(/[^A-Z0-9]+/g,'_').toLowerCase().replace(/^_+|_+$/g,'')}
-function workResponsible(work){const cw=canonicalWork(work),row=getWorkRow(cw),raw=row?.raw||{};if(row&&('responsable' in raw||'responsible' in raw||'responsable' in row||'responsible' in row))return canonicalResponsible(raw.responsable??raw.responsible??row.responsable??row.responsible??'');return canonicalResponsible((state.workResponsibles||{})[cw])||DEFAULT_WORK_RESPONSIBLES[cw]||''}
+function workResponsible(work){if(isWorkDeleted(work))return '';const cw=canonicalWork(work),row=getWorkRow(cw),raw=row?.raw||{};if(row&&('responsable' in raw||'responsible' in raw||'responsable' in row||'responsible' in row))return canonicalResponsible(raw.responsable??raw.responsible??row.responsable??row.responsible??'');return canonicalResponsible((state.workResponsibles||{})[cw])||DEFAULT_WORK_RESPONSIBLES[cw]||''}
 
 function responsibleOptions(selected){return '<option value="">Sin asignar</option>'+WORK_RESPONSIBLES.map(r=>'<option value="'+esc(r)+'" '+(norm(r)===norm(selected)?'selected':'')+'>'+esc(r)+'</option>').join('')}
-function allWorks(){const fromWorks=(state.works||[]).map(dbWorkName); const fromPlants=(state.plants||[]).map(p=>canonicalWork(p.name||p.plant||p.work||p.obra||((p.raw||{}).name)||((p.raw||{}).obra)||'')); const fromRecords=(state.records||[]).map(r=>recordWork(r)); const assigned=[...Object.values(USERS).flatMap(u=>u.works||[]),...(state.users||[]).flatMap(u=>u.assigned_plants||[])].filter(w=>w!=='*'&&w!=='TODAS'); return uniqueWorks([...(ALL_ASSIGNABLE_WORKS||[]),...fromWorks,...fromPlants,...fromRecords,...(state.localWorks||[]),...assigned])}
-function isWorkInactive(w){const cw=canonicalWork(w); const row=getWorkRow(cw);if(row)return dbWorkInactive(row);return (state.inactiveWorks||[]).map(norm).includes(norm(cw))}
+function allWorks(){const fromWorks=(state.works||[]).map(dbWorkName); const fromPlants=(state.plants||[]).map(p=>canonicalWork(p.name||p.plant||p.work||p.obra||((p.raw||{}).name)||((p.raw||{}).obra)||'')); const fromRecords=(state.records||[]).map(r=>recordWork(r)); const assigned=[...Object.values(USERS).flatMap(u=>u.works||[]),...(state.users||[]).flatMap(u=>u.assigned_plants||[])].filter(w=>w!=='*'&&w!=='TODAS'); return uniqueWorks([...(ALL_ASSIGNABLE_WORKS||[]),...fromWorks,...fromPlants,...fromRecords,...(state.localWorks||[]),...assigned]).filter(w=>!isWorkDeleted(w))}
+function isWorkInactive(w){const cw=canonicalWork(w);if(isWorkDeleted(cw))return true; const row=getWorkRow(cw);if(row)return dbWorkInactive(row);return (state.inactiveWorks||[]).map(norm).includes(norm(cw))}
 function activeWorks(){return allWorks().filter(w=>!isWorkInactive(w))}
 function worksForResponsible(resp,includeInactive=true){resp=canonicalResponsible(resp); return allWorks().filter(w=>canonicalResponsible(workResponsible(w))===resp).filter(w=>includeInactive||!isWorkInactive(w));}
 function masterWorksForUser(includeInactive=false){
@@ -483,14 +483,21 @@ function masterWorksForUser(includeInactive=false){
   if(resp && !isReadOnly()){
     works=worksForResponsible(resp,true);
   }else{
-    works=Array.isArray(u.works)?u.works:(MASTER_WORKS[userKeyMaster()]||MASTER_WORKS.matias);
+    works=Array.isArray(u.works)?u.works:(MASTER_WORKS[userKeyMaster()]||[]);
   }
-  let base=(works.includes('*')||works.includes('TODAS'))?allWorks():uniqueWorks(works||[]);
-  return includeInactive?base:base.filter(w=>!isWorkInactive(w));
+  let base=uniqueWorks((works||[]).filter(w=>!['*','TODAS'].includes(w)));
+  base=base.filter(w=>!isWorkDeleted(w));return includeInactive?base:base.filter(w=>!isWorkInactive(w));
 }
 function bucketOf(r){return r.bucket||r.record_type||r.type||''}
-function recordWork(r){const raw=r.raw||{};const explicit=raw.obra||r.work||r.obra||raw.ultimaObra||r.plant;if(explicit&&norm(explicit)!=='GENERAL')return canonicalWork(explicit); return canonicalWork([r.plant,r.planta,r.work,r.obra,r.company,r.empresa,raw.plant,raw.planta,raw.work,raw.obra,raw.ultimaObra,raw.plantaActual,raw.empresa,raw.cliente].join(' ')) || r.work || r.plant || ''}
-function userHasAllWorks(){const u=state.user||{}; const works=Array.isArray(u.works)?u.works:[]; return !!(u.superAdmin||u.username==='sorio'||works.includes('*')||works.includes('TODAS'))}
+function recordWork(r){
+ const raw=r.raw||{},laboral=['bajas','telegramas'].includes(bucketOf(r));
+ const values=laboral?[raw.obra,r.plant,r.planta,raw.planta,r.work,r.obra,raw.ultimaObra]:[r.plant,r.planta,raw.planta,r.work,r.obra,raw.obra,raw.ultimaObra];
+ if(laboral&&raw.obra&&raw.obra===r.work&&r.plant&&!['GENERAL','MATRIZ'].includes(norm(r.plant)))values.unshift(r.plant);
+ const value=values.find(v=>String(v||'').trim()&&!['GENERAL','MATRIZ'].includes(norm(v)));
+ if(value){const row=(state.works||[]).find(w=>w.id===value);return row?dbWorkName(row):canonicalWork(value)}
+ return canonicalWork(values.find(v=>String(v||'').trim())||'');
+}
+function userHasAllWorks(){return String(state.user?.username||'').toLowerCase()==='sorio'}
 function canManageRequirementCatalog(){const u=state.user||{}; return String(u.username||'').toLowerCase()==='sorio'}
 function canSee(r){const cw=recordWork(r); if(!cw||isWorkInactive(cw))return false; if(userHasAllWorks())return true; const allowed=masterWorksForUser(false).map(norm); return allowed.includes(norm(cw))}
 function visibleRecords(bucket){
@@ -980,11 +987,12 @@ function drawUnificacionLegajos(){
 function renderObras(){
   $('pageTitle').textContent='Obras';
   const sorio=canManageWorks();
-  $('pageSub').textContent=(sorio?'Administración de obras, responsables y estados':'Consulta de obras asignadas')+' · Versión 30/10 R4';
+  $('pageSub').textContent=(sorio?'Administración de obras, responsables y estados':'Consulta de obras asignadas')+' · Versión 30/10 R6';
   const list=sorio?allWorks():masterWorksForUser(true);
   const active=list.filter(w=>!isWorkInactive(w)).length, inactive=list.length-active;
-  const rows=list.map(w=>{const ina=isWorkInactive(w); const resp=workResponsible(w)||'Sin asignar'; return '<tr class="work-status-row '+(ina?'inactive':'')+'"><td><b>'+esc(w)+'</b></td><td>'+(sorio?'<select class="input work-resp-select" data-work-resp="'+esc(w)+'">'+responsibleOptions(resp)+'</select>':'<b>'+esc(resp)+'</b>')+'</td><td>'+(ina?'<span class="tag red">Inactiva</span>':'<span class="tag green">Activa</span>')+'</td><td><span class="muted">'+(ina?'No muestra vencimientos hasta reactivar':'Incluida en vencimientos y filtros')+'</span></td><td><div class="work-actions">'+(sorio?(ina?'<button class="btn primary" data-work-toggle="'+esc(w)+'" data-work-status="active">Reactivar</button>':'<button class="btn danger" data-work-toggle="'+esc(w)+'" data-work-status="inactive">Dejar inactiva</button>'):'<span class="muted">Solo lectura</span>')+'</div></td></tr>'}).join('')||'<tr><td colspan="5" class="empty">Sin obras asignadas.</td></tr>';
+  const rows=list.map(w=>{const ina=isWorkInactive(w); const resp=workResponsible(w)||'Sin asignar'; return '<tr class="work-status-row '+(ina?'inactive':'')+'"><td><b>'+esc(w)+'</b></td><td>'+(sorio?'<select class="input work-resp-select" data-work-resp="'+esc(w)+'">'+responsibleOptions(resp)+'</select>':'<b>'+esc(resp)+'</b>')+'</td><td>'+(ina?'<span class="tag red">Inactiva</span>':'<span class="tag green">Activa</span>')+'</td><td><span class="muted">'+(ina?'No muestra vencimientos hasta reactivar':'Incluida en vencimientos y filtros')+'</span></td><td><div class="work-actions">'+(sorio?(ina?'<button class="btn primary" data-work-toggle="'+esc(w)+'" data-work-status="active">Reactivar</button>':'<button class="btn danger" data-work-toggle="'+esc(w)+'" data-work-status="inactive">Dejar inactiva</button>')+' <button class="btn danger" data-work-delete="'+esc(w)+'">Eliminar</button>':'<span class="muted">Solo lectura</span>')+'</div></td></tr>'}).join('')||'<tr><td colspan="5" class="empty">Sin obras asignadas.</td></tr>';
   $('view').innerHTML='<div class="cards"><div class="card"><div class="kpi-label">Obras activas</div><div class="kpi-num" style="color:var(--green)">'+active+'</div></div><div class="card"><div class="kpi-label">Obras inactivas</div><div class="kpi-num" style="color:var(--red)">'+inactive+'</div></div></div>'+(sorio?'<div class="panel"><div class="panel-head"><div><h3>Agregar obra</h3><p class="muted" style="margin:4px 0 0">Solo Sorio puede crear obras y definir el responsable.</p></div></div><div class="modal-body"><div class="work-add-box"><div class="field"><label>Nombre de obra</label><input id="newWorkName" class="input" placeholder="Ej: NUEVA OBRA"></div><div class="field"><label>Responsable</label><select id="newWorkResponsible" class="input">'+responsibleOptions('')+'</select></div><button class="btn primary" id="addWorkBtn">➕ Agregar obra</button></div></div></div>':'<div class="modal-note"><b>Modo consulta.</b><br><span class="muted">Solo Sorio puede agregar, activar o inactivar obras. Acá ves únicamente tus obras asignadas.</span></div>')+'<div class="work-note">Las obras inactivas quedan ocultas de vencimientos, dashboard, calendario, informes y listados. Al reactivarlas vuelven a aparecer.</div><div class="panel" style="margin-top:14px"><div class="panel-head"><h3>Listado de obras</h3><div class="toolbar"><span class="tag green">'+active+' activas</span><span class="tag red">'+inactive+' inactivas</span></div></div><div class="table-wrap"><table><thead><tr><th>Obra</th><th>Responsable</th><th>Estado</th><th>Efecto</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  document.querySelectorAll('[data-work-delete]').forEach(btn=>btn.addEventListener('click',()=>eliminarObra(btn.dataset.workDelete)));
   const add=$('addWorkBtn'); if(add)add.addEventListener('click',addNewWork);
   document.querySelectorAll('[data-work-toggle]').forEach(btn=>btn.addEventListener('click',()=>toggleWorkStatus(btn.dataset.workToggle,btn.dataset.workStatus)));
   document.querySelectorAll('[data-work-resp]').forEach(sel=>sel.addEventListener('change',()=>saveWorkResponsible(sel.dataset.workResp,sel.value)));
@@ -994,8 +1002,8 @@ async function addNewWork(){
  const name=canonicalWork($('newWorkName').value),responsable=$('newWorkResponsible').value;
  if(!name)return alert('Completá el nombre de la obra.');if(!responsable)return alert('Seleccioná el responsable de la obra.');
  const btn=$('addWorkBtn');if(btn.disabled)return;btn.disabled=true;
- try{const old=workResponsible(name);await persistSharedWork(name,{responsable,status:'Activo'});try{await syncResponsibleUserAssignments(name,old,responsable)}catch(e){alert('La obra quedó guardada, pero no se pudo actualizar la asignación del usuario: '+e.message+'. Volvé a asignar el responsable.')}buildShell();renderObras();showSync('Obra guardada en Supabase');}
- catch(e){alert('Versión 30/10 R4 · No se pudo guardar la obra: '+(e.message||e));}finally{btn.disabled=false}
+ try{const old=workResponsible(name);await persistSharedWork(name,{responsable,status:'Activo',deletedAt:null,deletedBy:null});try{await syncResponsibleUserAssignments(name,old,responsable)}catch(e){alert('La obra quedó guardada, pero no se pudo actualizar la asignación del usuario: '+e.message+'. Volvé a asignar el responsable.')}buildShell();renderObras();showSync('Obra guardada en Supabase');}
+ catch(e){alert('Versión 30/10 R6 · No se pudo guardar la obra: '+(e.message||e));}finally{btn.disabled=false}
 }
 async function syncResponsibleUserAssignments(work,oldResp,newResp){if(blockWrite())return;
   const w=canonicalWork(work);
@@ -1177,7 +1185,7 @@ function isBajaPlanta(r){return bucketOf(r)==='bajas' && tipoMovimiento(r)==='ba
 function isReincorporacion(r){return bucketOf(r)==='bajas' && tipoMovimiento(r)==='reincorporacion'}
 function movimientoOrden(tm){return tm==='reincorporacion'?3:(tm==='baja_planta'?2:(tm==='baja_general'?1:0))}
 function bajaWork(r){const raw=r&&r.raw||{}; return canonicalWork([raw.ultimaObra,raw.planta,raw.obra,r.work,r.plant,r.display_name].join(' '))||recordWork(r)}
-function canSeeBajaMove(r){if(isAdmin())return true; const w=bajaWork(r); return !!w && masterWorksForUser().map(norm).includes(norm(w))}
+function canSeeBajaMove(r){if(userHasAllWorks())return true; const w=bajaWork(r); return !!w && masterWorksForUser().map(norm).includes(norm(w))}
 function isActiveBajaRecord(r){const leg=legajoOf(r); if(!leg)return false; let last=null; state.records.forEach(x=>{if(norm(legajoOf(x))!==norm(leg))return; const tm=tipoMovimiento(x); if(!['baja_general','baja_planta','reincorporacion'].includes(tm))return; const item={r:x,date:moveDate(x),tm,ord:movimientoOrden(tm)}; if(!last||String(item.date)>String(last.date)||(String(item.date)===String(last.date)&&item.ord>last.ord))last=item;}); return !!(last&&(last.tm==='baja_general'||last.tm==='baja_planta'))}
 function allBajasGenerales(){return state.records.filter(isBajaGeneral)}
 function allBajasPlanta(){let rows=state.records.filter(isBajaPlanta); const wf=$('workFilter')?$('workFilter').value:'TODAS'; if(wf&&wf!=='TODAS')rows=rows.filter(r=>norm(bajaWork(r))===norm(wf)); if(!userHasAllWorks())rows=rows.filter(canSeeBajaMove); return rows}
@@ -1371,7 +1379,7 @@ applyEmpToNewForm = function(emp){
   if($('n_company')&&!$('n_company').value)$('n_company').value='A.L. Servicios Integrales S.A.';
   if($('n_obs') && String($('n_obs').value||'').includes('Datos base Excel')) $('n_obs').value='';
 };
-function bajaGeneralList(){return (state.records||[]).filter(r=>bucketOf(r)==='bajas' && !isReincorporacion(r) && !((r.raw||{}).tipoMovimiento==='baja_planta'));}
+function bajaGeneralList(){return (state.records||[]).filter(r=>bucketOf(r)==='bajas' && (userHasAllWorks()||canSee(r)) && !isReincorporacion(r) && !((r.raw||{}).tipoMovimiento==='baja_planta'));}
 function bajaSortValue(b){const r=b.raw||{}; const v=r.tsMovimiento||r.fechaMovimiento||r.creado||r.created_at||b.created_at||r.fechaBaja||''; const t=Date.parse(String(v).length===10?String(v)+'T00:00:00':String(v)); return isNaN(t)?0:t;}
 function bajaSeguimientos(b){return Array.isArray((b.raw||{}).seguimientos)?(b.raw||{}).seguimientos:[];}
 function segPendientesCount(b){return bajaSeguimientos(b).filter(s=>(s.estado||'')!=='Entregado' && (s.estado||'')!=='Cerrado').length;}
@@ -1460,7 +1468,7 @@ function telegramaEstadoActualHtml(t){
   if(tipo==='despido')return '<span class="tag yellow">Abierto · '+esc(laboral)+' · '+esc(postal)+'</span>';
   return '<span class="tag yellow">Abierto · '+esc(postal)+'</span>';
 }
-function telegramasVisibles(){return (state.records||[]).filter(r=>bucketOf(r)==='telegramas').sort((a,b)=>String((b.raw||{}).fechaEnvio||(b.raw||{}).fecha||b.created_at||'').localeCompare(String((a.raw||{}).fechaEnvio||(a.raw||{}).fecha||a.created_at||'')))}
+function telegramasVisibles(){return (state.records||[]).filter(r=>bucketOf(r)==='telegramas'&&(userHasAllWorks()||canSee(r))).sort((a,b)=>String((b.raw||{}).fechaEnvio||(b.raw||{}).fecha||b.created_at||'').localeCompare(String((a.raw||{}).fechaEnvio||(a.raw||{}).fecha||a.created_at||'')))}
 renderTelegramas=function(){
   $('pageTitle').textContent='Telegramas';$('pageSub').textContent='Expedientes, seguimiento postal y cierre de ciclos';
   const rows=telegramasVisibles(),abiertos=rows.filter(x=>!telegramaCerrado(x)).length,cerrados=rows.length-abiertos,intimaciones=rows.filter(x=>telegramaTipo(x)==='intimacion').length,despidos=rows.length-intimaciones;
@@ -1504,9 +1512,9 @@ async function saveTelegramaSeguimientoEstado(id,idx){if(blockWrite())return;con
 async function saveTelegramaEstadoLaboral(id){if(blockWrite())return;const t=state.records.find(x=>x.id===id);if(!t)return;const raw=Object.assign({},t.raw||{},{fechaBaja:$('teFechaBaja').value,gremio:$('teGremio').value,estadoLaboral:$('teEstadoLaboral').value});await updateTelegramaRaw(t,raw,'Estado laboral actualizado')}
 async function deleteTelegramaSeguimiento(id,idx){if(blockWrite())return;if(!confirm('¿Eliminar este seguimiento?'))return;const t=state.records.find(x=>x.id===id);if(!t)return;const raw=Object.assign({},t.raw||{});raw.seguimientos=[...(raw.seguimientos||[])];raw.seguimientos.splice(idx,1);await updateTelegramaRaw(t,raw,'Seguimiento eliminado')}
 
-function gestionObra(r){return (r.raw||{}).obra||recordWork(r)||'GENERAL'}
+function gestionObra(r){return recordWork(r)||'GENERAL'}
 function gestionObraOptions(selected='',placeholder='Seleccionar obra'){
-  const works=[...new Set([...allWorks(),...gestionLaboralRows().map(x=>gestionObra(x.r)),selected].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  const works=[...new Set([...masterWorksForUser(true),...(userHasAllWorks()?gestionLaboralRows().map(x=>gestionObra(x.r)):[]),selected].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
   return '<option value="">'+esc(placeholder)+'</option>'+works.map(w=>'<option value="'+esc(w)+'" '+(w===selected?'selected':'')+'>'+esc(w)+'</option>').join('');
 }
 function gestionObraField(id,selected=''){return '<div class="field"><label>Obra</label><select id="'+id+'" class="input">'+gestionObraOptions(selected)+'</select></div>'}
@@ -1515,7 +1523,7 @@ function gestionFecha(r){const v=String((r.raw||{}).fechaEnvio||(r.raw||{}).fech
 /* Vista única de Bajas e Intimaciones */
 function gestionLaboralRows(){
   const bajas=bajaGeneralList().map(r=>({clase:'baja_legacy',tipo:'baja',r})),telegramas=telegramasVisibles().map(r=>({clase:'telegrama',tipo:telegramaTipo(r)==='intimacion'?'intimacion':'baja',r}));
-  return bajas.concat(telegramas).sort((a,b)=>{const fa=(a.r.raw||{}).fechaEnvio||(a.r.raw||{}).fechaBaja||(a.r.raw||{}).fecha||a.r.created_at||'',fb=(b.r.raw||{}).fechaEnvio||(b.r.raw||{}).fechaBaja||(b.r.raw||{}).fecha||b.r.created_at||'';return String(fb).localeCompare(String(fa))});
+  return bajas.concat(telegramas).filter(x=>userHasAllWorks()||canSee(x.r)).sort((a,b)=>{const fa=(a.r.raw||{}).fechaEnvio||(a.r.raw||{}).fechaBaja||(a.r.raw||{}).fecha||a.r.created_at||'',fb=(b.r.raw||{}).fechaEnvio||(b.r.raw||{}).fechaBaja||(b.r.raw||{}).fecha||b.r.created_at||'';return String(fb).localeCompare(String(fa))});
 }
 function gestionLaboralCerrado(x){if(x.clase==='telegrama')return telegramaCerrado(x.r);const r=x.r.raw||{};return ['Firmó todo','Todo OK'].includes(canonEstado(r.estado||''))&&segPendientesCount(x.r)===0}
 function nuevoMovimientoLaboral(){
@@ -1694,7 +1702,7 @@ function informeSetSheet(wb,name,data,widths){
   XLSX.utils.book_append_sheet(wb,ws,name.slice(0,31));
 }
 function informeExcelTelegramas(){return telegramasVisibles().map(t=>{const r=t.raw||{};return {'Tipo':telegramaTipoLabel(t),'Estado del ciclo':telegramaCerrado(t)?'Cerrado':'Abierto','Estado postal':telegramaUltimoEstadoPostal(t),'Estado laboral':r.estadoLaboral||'','Legajo':r.legajo||t.identifier||'','Destinatario':r.destinatario||r.nombre||t.display_name||'','DNI':r.documento||'','CUIL':r.cuil||'','N° telegrama':r.numeroTelegrama||'','Fecha de envío':formatFechaAR(r.fechaEnvio||r.fecha)||'','Fecha de baja':formatFechaAR(r.fechaBaja)||'','Gremio':r.gremio||'','Obra':recordWork(t)||'','Observaciones':r.observaciones||''}})}
-function informeExcelBajas(){return (state.records||[]).filter(x=>['bajas','baja'].includes(bucketOf(x))).map(b=>{const r=b.raw||{},emp=findEmpByLegajo(r.legajo||b.identifier);return {'Legajo':r.legajo||b.identifier||'','Nombre':r.nombre||b.display_name||'','DNI':r.documento||empVal(emp,'Documento'),'CUIL':empVal(emp,'CUIL'),'Fecha de baja':formatFechaAR(r.fechaBaja)||'','Gremio':r.gremio||'','Estado':r.estado||'','Movimiento':r.movimiento||'','Obra':r.ultimaObra||recordWork(b)||'','Observaciones':r.observaciones||''}})}
+function informeExcelBajas(){return (state.records||[]).filter(x=>['bajas','baja'].includes(bucketOf(x))&&(userHasAllWorks()||canSee(x))).map(b=>{const r=b.raw||{},emp=findEmpByLegajo(r.legajo||b.identifier);return {'Legajo':r.legajo||b.identifier||'','Nombre':r.nombre||b.display_name||'','DNI':r.documento||empVal(emp,'Documento'),'CUIL':empVal(emp,'CUIL'),'Fecha de baja':formatFechaAR(r.fechaBaja)||'','Gremio':r.gremio||'','Estado':r.estado||'','Movimiento':r.movimiento||'','Obra':r.ultimaObra||recordWork(b)||'','Observaciones':r.observaciones||''}})}
 function exportInformeExcel(){
   if(!window.XLSX)return alert('No se pudo cargar el generador de Excel. Revisá la conexión a internet y volvé a intentar.');
   const registros=informeRegistroRows(),docs=informeDocumentoRows(),st=informeStatsGerenciales(),vista=informeVistaActual(),usuario=(state.user&&state.user.name)||'',obra=($('workFilter')&&$('workFilter').value)||'TODAS',requisito=$('infRequisito')?.value||'Todos',horizonte=informeLimiteDias(),ahora=new Date();
@@ -1898,11 +1906,22 @@ function alPdfEnsureNav(){if($('nav-herramientas-pdf'))return;const anchor=$('na
 function alPdfRender(){ $('pageTitle').textContent='Herramientas PDF';$('pageSub').textContent='Uní, seleccioná y editá páginas · Descarga en tu equipo';if($('alPdfWorkspace'))return;const frame=document.createElement('iframe');frame.id='alPdfWorkspace';frame.title='Herramientas PDF de AL';frame.setAttribute('sandbox','allow-scripts allow-downloads allow-modals allow-same-origin');frame.setAttribute('referrerpolicy','no-referrer');frame.style.cssText='display:block;width:100%;height:calc(100vh - 130px);min-height:640px;border:0;border-radius:18px;background:#fffaf1';frame.srcdoc=new TextDecoder().decode(Uint8Array.from(atob(alPdfDocumentBase64),c=>c.charCodeAt(0)));$('view').replaceChildren(frame)}
 const alRenderBeforePdf=render;render=function(){medEnsureNav();alPdfEnsureNav();if(state.loaded&&state.view==='herramientasPdf'){alPdfRender();document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));return}const frame=$('alPdfWorkspace');if(frame)frame.remove();alRenderBeforePdf()};window.render=render;
 
+function isWorkDeleted(w){return !!getWorkRow(w)?.raw?.deletedAt}
+async function eliminarObra(work){
+ if(blockWrite()||!canManageWorks())return;
+ const w=canonicalWork(work),old=workResponsible(w);
+ if(!confirm('¿Eliminar la obra '+w+' de los listados y asignaciones? Se conservarán sus registros e historial.'))return;
+ try{await persistSharedWork(w,{deletedAt:new Date().toISOString(),deletedBy:state.user.username,status:'Inactiva',responsable:''});
+ const errors=[];try{await syncResponsibleUserAssignments(w,old,'')}catch(e){errors.push(e.message)}
+ for(const u of [...(state.users||[])]){if(Array.isArray(u.assigned_plants)&&u.assigned_plants.some(x=>norm(canonicalWork(x))===norm(w)))try{await saveAssignedWorks(u.username,u.assigned_plants.filter(x=>norm(canonicalWork(x))!==norm(w)))}catch(e){errors.push(u.username+': '+e.message)}}
+ invalidateRecordCache();buildShell();renderObras();if(errors.length)alert('Obra retirada de los listados. No se pudieron actualizar algunas asignaciones: '+errors.join('; '));else showSync('Obra eliminada de los listados; historial conservado');
+ }catch(e){alert('No se pudo eliminar la obra: '+(e.message||e))}
+}
 /* Shared works: commit remote data before acknowledging changes. */
 async function persistSharedWork(name,changes={}){
  if(!supa)throw new Error('Supabase no conectado');
  const w=canonicalWork(name),row=getWorkRow(w),raw=Object.assign({},row?.raw||{},changes,{updatedAt:new Date().toISOString(),updatedFrom:'app'});
- const payload={name:w,plant:row?.plant||w,raw};
+ const payload={name:row?.name||w,plant:row?.plant||w,raw};
  if('status' in changes){raw.estado=changes.status;for(const key of ['status','estado','state'])if(row&&key in row)payload[key]=changes.status;for(const key of ['active','is_active'])if(row&&key in row)payload[key]=changes.status==='Activo'}
  let request;if(row?.id){request=supa.from('alsi_works').update(payload).eq('id',row.id)}else{payload.id=crypto.randomUUID();request=supa.from('alsi_works').insert(payload)}
  const result=await request.select('*').single();if(result.error)throw result.error;if(!result.data)throw new Error('El servidor no confirmó la obra');
