@@ -1896,7 +1896,7 @@ const alPdfDocumentBase64="PCFkb2N0eXBlIGh0bWw+PGh0bWwgbGFuZz0iZXMiPjxtZXRhIGNoY
 function alPdfEnsureNav(){if($('nav-herramientas-pdf'))return;const anchor=$('nav-renovaciones')||document.querySelector('[data-view="examenesMedicos"]');if(!anchor)return;const button=document.createElement('button');button.id='nav-herramientas-pdf';button.className='nav-btn';button.dataset.view='herramientasPdf';button.textContent='Herramientas PDF';button.onclick=()=>setView('herramientasPdf');anchor.after(button)}
 function alPdfRender(){ $('pageTitle').textContent='Herramientas PDF';$('pageSub').textContent='Uní, seleccioná y editá páginas · Descarga en tu equipo';if($('alPdfWorkspace'))return;const frame=document.createElement('iframe');frame.id='alPdfWorkspace';frame.title='Herramientas PDF de AL';frame.setAttribute('sandbox','allow-scripts allow-downloads allow-modals allow-same-origin');frame.setAttribute('referrerpolicy','no-referrer');frame.style.cssText='display:block;width:100%;height:calc(100vh - 130px);min-height:640px;border:0;border-radius:18px;background:#fffaf1';frame.srcdoc=new TextDecoder().decode(Uint8Array.from(atob(alPdfDocumentBase64),c=>c.charCodeAt(0)));$('view').replaceChildren(frame)}
 const alRenderBeforePdf=render;render=function(){medEnsureNav();alPdfEnsureNav();if(state.loaded&&state.view==='herramientasPdf'){alPdfRender();document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));return}const frame=$('alPdfWorkspace');if(frame)frame.remove();alRenderBeforePdf()};window.render=render;
-})();
+
 /* Shared works: commit remote data before acknowledging changes. */
 async function persistSharedWork(name,changes={}){
  if(!supa)throw new Error('Supabase no conectado');
@@ -1933,6 +1933,7 @@ renderBajas=function(){const f=$('glRows')?gestionFiltros():null;gestionRenderOr
 const gestionDrawOriginal=drawGestionLaboral;
 drawGestionLaboral=function(){gestionDrawOriginal();const st=gestionResumen(gestionFiltradas());const values=[st.Bajas,st.Intimaciones,st.Abiertos,st.Cerrados];document.querySelectorAll('#view .final-card .num').forEach((el,i)=>{if(i<values.length)el.textContent=values[i]})};
 
+})();
 </script>
 
 
